@@ -223,7 +223,7 @@ ttk.Button(recordGamePanel, text="Record Results", command=recordResults).pack()
 panelReset = ttk.LabelFrame(root, text="Reset League standings")
 panelReset.grid(column=1, row=3, padx=10, pady=20)
 panelReset.place(x=145, y=275)
-ttk.Button(panelReset, text="Variable", command=resetLeague).pack()
+ttk.Button(panelReset, text="Reset", command=resetLeague).pack()
 
 
 root.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
