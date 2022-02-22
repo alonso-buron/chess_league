@@ -3,6 +3,18 @@
         {
             "name": "jack",
             "rating": 1000
+        },
+        {
+            "name": "Haxor1611",
+            "rating": 1000
+        },
+        {
+            "name": "bob",
+            "rating": 1000
+        },
+        {
+            "name": "jim",
+            "rating": 1000
         }
     ]
 }
