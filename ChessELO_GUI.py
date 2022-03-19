@@ -45,9 +45,6 @@ def GetProbability(rating1, rating2):
 
 
 def getElo(ratingOfPlayer1, ratingOfPlayer2, K, result):
-    eloChange = 0
-    higherRating = 0
-    lowerRating = 0
     if ratingOfPlayer1 >= ratingOfPlayer2:
         higherRating = ratingOfPlayer1
         lowerRating = ratingOfPlayer2
@@ -55,21 +52,14 @@ def getElo(ratingOfPlayer1, ratingOfPlayer2, K, result):
         higherRating = ratingOfPlayer2
         lowerRating = ratingOfPlayer1
     expectedScore = GetProbability(higherRating, lowerRating)
-    newRatingOfPlayer1 = 0
-    newRatingOfPlayer2 = 0
     eloChange = K * (1 - expectedScore)
     print(eloChange)
     if result == 1:
-
         newRatingOfPlayer1 = int(round(ratingOfPlayer1 + eloChange, 1))
         newRatingOfPlayer2 = int(round(ratingOfPlayer2 - eloChange, 1))
-    elif result == 0:
-
+    else:
         newRatingOfPlayer1 = int(round(ratingOfPlayer1 - eloChange, 1))
         newRatingOfPlayer2 = int(round(ratingOfPlayer2 + eloChange, 1))
-    else:
-        pass
-
     return newRatingOfPlayer1, newRatingOfPlayer2
 
 
@@ -119,20 +109,10 @@ def objIntoJson(jsonFile, LeagueToDump):
     return toJSON(LeagueToDump)
 
 
-def change_attribute(attribute, value):
-    attribute = value
-
-
 def sortObject(objectForUse):
     return sorted(objectForUse.players, key=lambda x: int(x.rating), reverse=True)
 
-
 league = jsonIntoObj("league.json")
-
-
-# league = League([Player("jack", 1500), Player("dad", 1000)])
-# league = League(playersList)
-
 
 def getLeagueTable(inputLeague):
     sortedList = sortObject(inputLeague)
@@ -170,8 +150,10 @@ def recordResults():
 
 
 def resetLeague():
-    for ply in league.players:
-        ply.rating = 1000
+    for player in league.players:
+        player.rating = 1000
+        getLeagueTable(league)
+        writeStandings("league.json", league)
 
 
 root = tk.Tk()
