@@ -1,11 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, login_required, current_user, logout_user
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import DictCursor
 from werkzeug.security import generate_password_hash, check_password_hash
+import json
+from functools import wraps
+import time
 
 # Cargar variables de entorno desde .env en desarrollo
 load_dotenv()
@@ -87,76 +90,183 @@ def load_user(user_id):
         return User(user['id'], user['username'], user['is_admin'])
     return None
 
-def load_league():
+def load_league_data():
+    """Función única para cargar todos los datos necesarios"""
     conn = get_db()
     cur = conn.cursor()
     
-    cur.execute('SELECT white, black, result, date FROM games ORDER BY date DESC')
+    # Definir la fecha de inicio de las penalizaciones (2025/01/13)
+    start_date = datetime(2025, 1, 13)
+    
+    # Una sola consulta para juegos con ratings históricos
+    cur.execute('''
+        WITH weekly_counts AS (
+            SELECT player, COUNT(*) as games_this_week
+            FROM (
+                SELECT white as player FROM games 
+                WHERE date >= %s
+                  AND date >= NOW() - INTERVAL '7 days'
+                UNION ALL
+                SELECT black FROM games 
+                WHERE date >= %s
+                  AND date >= NOW() - INTERVAL '7 days'
+            ) w
+            GROUP BY player
+        )
+        SELECT 
+            g.white, g.black, g.result, g.date,
+            CASE 
+                WHEN NOW() >= %s THEN COALESCE(w1.games_this_week, 0)
+                ELSE 3  -- Antes de la fecha de inicio, considerar que todos tienen 3 juegos
+            END as white_weekly_games,
+            CASE 
+                WHEN NOW() >= %s THEN COALESCE(w2.games_this_week, 0)
+                ELSE 3  -- Antes de la fecha de inicio, considerar que todos tienen 3 juegos
+            END as black_weekly_games
+        FROM games g
+        LEFT JOIN weekly_counts w1 ON g.white = w1.player
+        LEFT JOIN weekly_counts w2 ON g.black = w2.player
+        ORDER BY g.date DESC
+    ''', (start_date, start_date, start_date, start_date))
     games = [dict(row) for row in cur.fetchall()]
     
-    cur.execute('SELECT name, initial_rating FROM players')
+    # Una consulta para todos los jugadores y sus conteos
+    cur.execute('''
+        SELECT 
+            p.name,
+            CASE 
+                WHEN NOW() >= %s THEN COALESCE(w.games_this_week, 0)
+                ELSE 3  -- Antes de la fecha de inicio, considerar que todos tienen 3 juegos
+            END as games_this_week
+        FROM players p
+        LEFT JOIN (
+            SELECT player, COUNT(*) as games_this_week
+            FROM (
+                SELECT white as player FROM games 
+                WHERE date >= %s
+                  AND date >= NOW() - INTERVAL '7 days'
+                UNION ALL
+                SELECT black FROM games 
+                WHERE date >= %s
+                  AND date >= NOW() - INTERVAL '7 days'
+            ) w
+            GROUP BY player
+        ) w ON p.name = w.player
+    ''', (start_date, start_date, start_date))
     players = [dict(row) for row in cur.fetchall()]
     
     cur.close()
     conn.close()
     
-    return {'games': games, 'players': players}
+    return games, players
+
+def get_weeks_stats():
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Obtener la fecha actual y el inicio de la semana
+    now = datetime.now()
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Contar juegos por jugador en la última semana
+    cur.execute('''
+        SELECT p.name, COUNT(g.id) as games_this_week
+        FROM players p
+        LEFT JOIN (
+            SELECT white as player, id, date FROM games
+            WHERE date >= %s
+            UNION ALL
+            SELECT black as player, id, date FROM games
+            WHERE date >= %s
+        ) g ON p.name = g.player
+        GROUP BY p.name
+    ''', (week_start, week_start))
+    
+    weekly_games = {row['name']: row['games_this_week'] for row in cur.fetchall()}
+    
+    cur.close()
+    conn.close()
+    return weekly_games
 
 def calculate_ratings_with_changes():
     conn = get_db()
     cur = conn.cursor()
     
-    cur.execute('SELECT name, initial_rating FROM players')
-    players = [dict(row) for row in cur.fetchall()]
+    # Obtener ratings iniciales desde start.json
+    with open('start.json', 'r', encoding='utf-8') as f:
+        start_data = json.load(f)
+        initial_ratings = {p['name']: p['rating'] for p in start_data['players']}
     
-    cur.execute('SELECT white, black, result FROM games ORDER BY date')
+    # Obtener todos los juegos ordenados por fecha
+    cur.execute('SELECT white, black, result, date FROM games ORDER BY date')
     games = [dict(row) for row in cur.fetchall()]
     
-    current_ratings = {p['name']: p['initial_rating'] for p in players}
-    elo_changes = []  # Lista para guardar los cambios de cada juego
+    # Empezar desde los ratings iniciales
+    current_ratings = initial_ratings.copy()
+    elo_changes = []
     
+    # Procesar juegos en orden cronológico y guardar ratings históricos
+    historical_ratings = []
     for game in games:
         white_rating = current_ratings[game['white']]
         black_rating = current_ratings[game['black']]
         result = game['result']
         
+        # Guardar ratings antes del juego
+        historical_ratings.append({
+            'white_rating': white_rating,
+            'black_rating': black_rating
+        })
+        
         new_white, new_black = getElo(white_rating, black_rating, 50, result)
         
-        # Guardar cambios de ELO
         white_change = new_white - white_rating
         black_change = new_black - black_rating
+        
+        current_ratings[game['white']] = new_white
+        current_ratings[game['black']] = new_black
+        
         elo_changes.append({
             'white_change': white_change,
             'black_change': black_change
         })
-        
-        # Actualizar ratings
-        current_ratings[game['white']] = new_white
-        current_ratings[game['black']] = new_black
+    
+    # Aplicar penalizaciones semanales al final
+    now = datetime.now()
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    weekly_games = get_weeks_stats()
+    for player, games_count in weekly_games.items():
+        if games_count < 3:
+            # Penalización más suave: -10 puntos por juego faltante
+            missing_games = 3 - games_count
+            penalty = -10 * missing_games
+            current_ratings[player] += penalty
     
     cur.close()
     conn.close()
     
-    return current_ratings, elo_changes
+    return current_ratings, elo_changes, historical_ratings
 
 def GetProbability(rating1, rating2):
-    return 1 / (1 + 10 ** ((rating1 - rating2) / 400))
+    return 1 / (1 + 10 ** ((rating2 - rating1) / 400))
 
 def getElo(ratingOfPlayer1, ratingOfPlayer2, K, result):
-    if ratingOfPlayer1 >= ratingOfPlayer2:
-        higherRating = ratingOfPlayer1
-        lowerRating = ratingOfPlayer2
-    else:
-        higherRating = ratingOfPlayer2
-        lowerRating = ratingOfPlayer1
-    expectedScore = GetProbability(higherRating, lowerRating)
-    eloChange = K * (1 - expectedScore)
-    if result == 1:
-        newRatingOfPlayer1 = int(round(ratingOfPlayer1 + eloChange, 1))
-        newRatingOfPlayer2 = int(round(ratingOfPlayer2 - eloChange, 1))
-    else:
-        newRatingOfPlayer1 = int(round(ratingOfPlayer1 - eloChange, 1))
-        newRatingOfPlayer2 = int(round(ratingOfPlayer2 + eloChange, 1))
+    # Calcular probabilidad de victoria para el jugador 1
+    expected = GetProbability(ratingOfPlayer1, ratingOfPlayer2)
+    
+    # El resultado actual (1 = victoria, 0.5 = empate, 0 = derrota)
+    actual = result
+    
+    # Calcular el cambio de ELO
+    change = K * (actual - expected)
+    
+    # Aplicar el cambio (redondeado a entero)
+    newRatingOfPlayer1 = int(round(ratingOfPlayer1 + change))
+    newRatingOfPlayer2 = int(round(ratingOfPlayer2 - change))
+    
     return newRatingOfPlayer1, newRatingOfPlayer2
 
 def format_name(full_name):
@@ -165,42 +275,121 @@ def format_name(full_name):
         return f"{parts[0]} {parts[-1][0]}."
     return full_name
 
+# Diccionario para almacenar los intentos de login por IP
+login_attempts = {}
+# Diccionario para almacenar las últimas acciones por usuario
+user_actions = {}
+# Rate limiting para sugerencias de partidas
+suggestion_timestamps = {}
+
+def rate_limit(max_requests=5, window=60):
+    """
+    Decorador para limitar peticiones por IP
+    max_requests: número máximo de peticiones permitidas
+    window: ventana de tiempo en segundos
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            ip = request.remote_addr
+            now = time.time()
+            
+            # Limpiar registros antiguos
+            if ip in suggestion_timestamps:
+                suggestion_timestamps[ip] = [t for t in suggestion_timestamps[ip] if now - t < window]
+            else:
+                suggestion_timestamps[ip] = []
+            
+            if len(suggestion_timestamps[ip]) >= max_requests:
+                return jsonify({'error': 'Demasiadas peticiones. Por favor espera un momento.'}), 429
+            
+            suggestion_timestamps[ip].append(now)
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
+
 @app.route('/')
 def index():
-    league_data = load_league()
-    ratings, elo_changes = calculate_ratings_with_changes()
+    games, players_data = load_league_data()
     
-    # Ordenar jugadores por rating
-    players = [{'name': name, 'rating': rating, 'display_name': format_name(name)} 
-              for name, rating in ratings.items()]
-    players.sort(key=lambda x: x['rating'], reverse=True)
+    # Calcular ratings (en memoria)
+    with open('start.json', 'r', encoding='utf-8') as f:
+        start_data = json.load(f)
+        current_ratings = {p['name']: p['rating'] for p in start_data['players']}
     
-    # Agregar display_name a los juegos
-    games_with_changes = []
-    for game, changes in zip(league_data['games'], elo_changes):
-        games_with_changes.append({
+    # Procesar juegos y calcular cambios
+    processed_games = []
+    for game in games:
+        white_rating = current_ratings[game['white']]
+        black_rating = current_ratings[game['black']]
+        
+        new_white, new_black = getElo(white_rating, black_rating, 50, game['result'])
+        white_change = new_white - white_rating
+        black_change = new_black - black_rating
+        
+        processed_games.append({
             **game,
             'white_display': format_name(game['white']),
             'black_display': format_name(game['black']),
-            'white_change': changes['white_change'],
-            'black_change': changes['black_change']
+            'white_rating': white_rating,
+            'black_rating': black_rating,
+            'white_change': white_change,
+            'black_change': black_change
         })
+        
+        current_ratings[game['white']] = new_white
+        current_ratings[game['black']] = new_black
     
-    return render_template('index.html', 
+    # Preparar datos de jugadores
+    players = [{
+        'name': p['name'],
+        'display_name': format_name(p['name']),
+        'rating': current_ratings[p['name']],
+        'games_this_week': p['games_this_week'],
+        'warning': p['games_this_week'] < 3
+    } for p in players_data]
+    
+    players.sort(key=lambda x: x['rating'], reverse=True)
+    
+    return render_template('index.html',
                          players=players,
-                         games=games_with_changes,
+                         games=processed_games,
                          is_admin=current_user.is_admin if not current_user.is_anonymous else False)
 
 @app.route('/add_game', methods=['POST'])
 @login_required
 def add_game():
     if not current_user.is_admin:
-        flash('Solo administradores pueden agregar partidas')
+        flash('Solo los administradores pueden agregar partidas')
         return redirect(url_for('index'))
+        
+    # Anti-spam para agregar partidas
+    user_id = current_user.id
+    now = datetime.now()
+    if user_id in user_actions:
+        last_action = user_actions[user_id]
+        if now - last_action < timedelta(seconds=2):
+            flash('Por favor espera un momento antes de agregar otra partida')
+            return redirect(url_for('index'))
     
-    white = request.form['white']
-    black = request.form['black']
-    result = float(request.form['result'])
+    user_actions[user_id] = now
+    
+    # Validación de entrada
+    white = request.form.get('white')
+    black = request.form.get('black')
+    result = request.form.get('result')
+    
+    if not all([white, black, result]) or white == black:
+        flash('Datos inválidos')
+        return redirect(url_for('index'))
+        
+    try:
+        result = float(result)
+        if result not in [0, 0.5, 1]:
+            raise ValueError
+    except ValueError:
+        flash('Resultado inválido')
+        return redirect(url_for('index'))
     
     conn = get_db()
     cur = conn.cursor()
@@ -219,21 +408,54 @@ def add_game():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        ip = request.remote_addr
+        now = datetime.now()
         
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM users WHERE username = %s', (username,))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
+        # Verificar intentos de login fallidos
+        if ip in login_attempts:
+            attempts, last_attempt = login_attempts[ip]
+            if attempts >= 5 and now - last_attempt < timedelta(minutes=15):
+                flash('Demasiados intentos fallidos. Por favor espera 15 minutos.')
+                return render_template('login.html')
+            elif now - last_attempt > timedelta(minutes=15):
+                login_attempts[ip] = (0, now)
         
-        if user and check_password_hash(user['password_hash'], password):
-            login_user(User(user['id'], user['username'], user['is_admin']))
-            return redirect(url_for('index'))
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Validación básica de entrada
+        if not username or not password or len(username) > 50 or len(password) > 100:
+            flash('Datos de entrada inválidos')
+            return render_template('login.html')
             
-        flash('Usuario o contraseña inválidos')
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM users WHERE username = %s', (username,))
+            user = cur.fetchone()
+            
+            if user and check_password_hash(user['password'], password):
+                user_obj = User(user['id'], user['username'], user['is_admin'])
+                login_user(user_obj)
+                
+                # Resetear intentos fallidos
+                if ip in login_attempts:
+                    del login_attempts[ip]
+                    
+                return redirect(url_for('index'))
+            
+            # Incrementar contador de intentos fallidos
+            attempts = login_attempts.get(ip, (0, now))[0] + 1
+            login_attempts[ip] = (attempts, now)
+            
+            flash('Usuario o contraseña incorrectos')
+            
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+                
     return render_template('login.html')
 
 @app.route('/logout')
@@ -275,79 +497,99 @@ def get_player_game_counts():
     return player_counts, pair_counts
 
 @app.route('/suggest_match')
+@rate_limit(max_requests=5, window=60)
+@login_required
 def suggest_match():
     conn = get_db()
     cur = conn.cursor()
     
-    # Obtener todos los jugadores
-    cur.execute('SELECT name FROM players')
-    players = [row['name'] for row in cur.fetchall()]
-    
-    cur.close()
-    conn.close()
-    
-    player_counts, pair_counts = get_player_game_counts()
-    
-    # Encontrar todas las posibles parejas y sus puntuaciones
-    pairs = []
-    for i, p1 in enumerate(players):
-        for p2 in players[i+1:]:
-            pair = tuple(sorted([p1, p2]))
-            games_between = pair_counts.get(pair, 0)
-            
-            # Calcular puntuación (menor es mejor)
-            score = games_between * 10  # Prioridad alta a parejas con pocos juegos
-            
-            # Penalizar si algún jugador tiene muchos más juegos que el promedio
-            avg_games = sum(player_counts.values()) / len(player_counts)
-            score += abs(player_counts[p1] - avg_games)
-            score += abs(player_counts[p2] - avg_games)
-            
-            # Agregar algo de aleatoriedad
-            from random import uniform
-            score += uniform(0, 5)
-            
-            pairs.append((score, p1, p2))
-    
-    # Ordenar por puntuación y tomar uno de los mejores
-    pairs.sort()
-    from random import randint
-    selected_index = randint(0, min(2, len(pairs)-1))
-    
-    if not pairs:
-        return jsonify({'error': 'No hay suficientes jugadores'})
-    
-    _, p1, p2 = pairs[selected_index]
-    
-    # Decidir colores basado en historial
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT white, black 
-        FROM games 
-        WHERE (white = %s OR black = %s OR white = %s OR black = %s)
-        ORDER BY date DESC
-        LIMIT 1
-    ''', (p1, p1, p2, p2))
-    last_game = cur.fetchone()
-    
-    if last_game:
-        if last_game['white'] == p1 or last_game['black'] == p2:
-            white, black = p2, p1
+    try:
+        # Obtener todos los jugadores
+        cur.execute('SELECT name FROM players')
+        players = [row['name'] for row in cur.fetchall()]
+        
+        cur.close()
+        conn.close()
+        
+        player_counts, pair_counts = get_player_game_counts()
+        
+        # Encontrar todas las posibles parejas y sus puntuaciones
+        pairs = []
+        for i, p1 in enumerate(players):
+            for p2 in players[i+1:]:
+                pair = tuple(sorted([p1, p2]))
+                games_between = pair_counts.get(pair, 0)
+                
+                # Calcular puntuación (menor es mejor)
+                score = games_between * 10  # Prioridad alta a parejas con pocos juegos
+                
+                # Penalizar si algún jugador tiene muchos más juegos que el promedio
+                avg_games = sum(player_counts.values()) / len(player_counts)
+                score += abs(player_counts[p1] - avg_games)
+                score += abs(player_counts[p2] - avg_games)
+                
+                # Agregar algo de aleatoriedad
+                from random import uniform
+                score += uniform(0, 5)
+                
+                pairs.append((score, p1, p2))
+        
+        # Ordenar por puntuación y tomar uno de los mejores
+        pairs.sort()
+        from random import randint
+        selected_index = randint(0, min(2, len(pairs)-1))
+        
+        if not pairs:
+            return jsonify({'error': 'No hay suficientes jugadores'})
+        
+        _, p1, p2 = pairs[selected_index]
+        
+        # Nueva conexión para la segunda consulta
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # Decidir colores basado en historial
+        cur.execute('''
+            SELECT white, black 
+            FROM games 
+            WHERE (white = %s OR black = %s OR white = %s OR black = %s)
+            ORDER BY date DESC
+            LIMIT 1
+        ''', (p1, p1, p2, p2))
+        last_game = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if last_game:
+            if last_game['white'] == p1 or last_game['black'] == p2:
+                white, black = p2, p1
+            else:
+                white, black = p1, p2
         else:
-            white, black = p1, p2
-    else:
-        from random import choice
-        if choice([True, False]):
-            white, black = p1, p2
-        else:
-            white, black = p2, p1
-    
-    return jsonify({
-        'white': white,
-        'black': black,
-        'white_display': format_name(white),
-        'black_display': format_name(black)
-    })
+            from random import choice
+            if choice([True, False]):
+                white, black = p1, p2
+            else:
+                white, black = p2, p1
+        
+        return jsonify({
+            'white': white,
+            'black': black,
+            'white_display': format_name(white),
+            'black_display': format_name(black)
+        })
+        
+    except Exception as e:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+        raise e
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory('static', 'favicon.ico')
 
 if __name__ == '__main__':
     init_db()  # Inicializar base de datos
