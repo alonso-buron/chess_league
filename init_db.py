@@ -2,22 +2,27 @@ import psycopg2
 from psycopg2.extras import DictCursor
 import json
 import os
-from urllib.parse import urlparse
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 def init_players():
     # Cargar jugadores desde start.json
     with open('start.json', 'r', encoding='utf-8') as f:
         start_data = json.load(f)
     
-    url = urlparse(os.environ.get('POSTGRES_URL'))
-    conn = psycopg2.connect(
-        dbname=url.path[1:],
-        user=url.username,
-        password=url.password,
-        host=url.hostname,
-        port=url.port
-    )
+    conn = psycopg2.connect(os.environ.get('POSTGRES_URL'))
     cur = conn.cursor()
+    
+    # Crear tabla si no existe
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS players (
+            id SERIAL PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            initial_rating INTEGER NOT NULL
+        )
+    ''')
     
     for player in start_data['players']:
         cur.execute(

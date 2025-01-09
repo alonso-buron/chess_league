@@ -15,8 +15,14 @@
         {
             "black": "Luis C\u00e1rdenas",
             "date": "2025-01-09 17:52:35",
-            "result": 0.0,
+            "result": 0,
             "white": "Marcos Waltemath"
+        },
+        {
+            "black": "Felipe Avilés",
+            "white": "Claudio Sanz",
+            "result": 0,
+            "date": "2025-01-09 18:30:00"
         }
     ],
     "players": [
