@@ -9,11 +9,19 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import json
 from functools import wraps
 import time
+from werkzeug.middleware.proxy_fix import ProxyFix
+import logging
+import sys
+
+# Configurar logging
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Cargar variables de entorno desde .env en desarrollo
 load_dotenv()
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev_key')
 
 login_manager = LoginManager()
@@ -22,7 +30,10 @@ login_manager.login_view = 'login'
 
 # Database setup
 def get_db():
-    connection = psycopg2.connect(os.environ.get('POSTGRES_URL'))
+    connection = psycopg2.connect(
+        os.environ.get('POSTGRES_URL'),
+        sslmode='require'
+    )
     connection.cursor_factory = DictCursor
     return connection
 
@@ -410,52 +421,70 @@ def login():
     if request.method == 'POST':
         ip = request.remote_addr
         now = datetime.now()
+        conn = None
+        cur = None
         
-        # Verificar intentos de login fallidos
-        if ip in login_attempts:
-            attempts, last_attempt = login_attempts[ip]
-            if attempts >= 5 and now - last_attempt < timedelta(minutes=15):
-                flash('Demasiados intentos fallidos. Por favor espera 15 minutos.')
-                return render_template('login.html')
-            elif now - last_attempt > timedelta(minutes=15):
-                login_attempts[ip] = (0, now)
-        
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        # Validación básica de entrada
-        if not username or not password or len(username) > 50 or len(password) > 100:
-            flash('Datos de entrada inválidos')
-            return render_template('login.html')
-            
         try:
+            username = request.form.get('username')
+            password = request.form.get('password')
+            
+            # Log de intento de login
+            logger.info(f"Intento de login para usuario: {username}")
+            
+            # Validación básica de entrada
+            if not username or not password or len(username) > 50 or len(password) > 100:
+                flash('Datos de entrada inválidos')
+                return render_template('login.html')
+            
+            # Verificar intentos de login fallidos
+            if ip in login_attempts:
+                attempts, last_attempt = login_attempts[ip]
+                if attempts >= 5 and now - last_attempt < timedelta(minutes=15):
+                    flash('Demasiados intentos fallidos. Por favor espera 15 minutos.')
+                    return render_template('login.html')
+                elif now - last_attempt > timedelta(minutes=15):
+                    login_attempts[ip] = (0, now)
+            
+            # Intentar conexión a la base de datos
             conn = get_db()
             cur = conn.cursor()
+            
+            # Buscar usuario
             cur.execute('SELECT * FROM users WHERE username = %s', (username,))
             user = cur.fetchone()
             
-            if user and check_password_hash(user['password'], password):
+            if user and check_password_hash(user['password_hash'], password):
                 user_obj = User(user['id'], user['username'], user['is_admin'])
                 login_user(user_obj)
                 
                 # Resetear intentos fallidos
                 if ip in login_attempts:
                     del login_attempts[ip]
-                    
+                
+                logger.info(f"Login exitoso para usuario: {username}")
                 return redirect(url_for('index'))
             
             # Incrementar contador de intentos fallidos
             attempts = login_attempts.get(ip, (0, now))[0] + 1
             login_attempts[ip] = (attempts, now)
             
+            logger.warning(f"Login fallido para usuario: {username}")
             flash('Usuario o contraseña incorrectos')
+            
+        except Exception as e:
+            logger.error(f"Error en login: {str(e)}", exc_info=True)
+            flash('Error al intentar iniciar sesión. Por favor intenta más tarde.')
+            return render_template('login.html')
             
         finally:
             if cur:
                 cur.close()
             if conn:
-                conn.close()
-                
+                try:
+                    conn.close()
+                except Exception as e:
+                    logger.error(f"Error al cerrar conexión: {str(e)}")
+    
     return render_template('login.html')
 
 @app.route('/logout')
@@ -592,5 +621,5 @@ def favicon():
     return send_from_directory('static', 'favicon.ico')
 
 if __name__ == '__main__':
-    init_db()  # Inicializar base de datos
-    app.run(debug=True) 
+    init_db()
+    app.run() 
