@@ -5,6 +5,8 @@ from collections import namedtuple
 from json import JSONEncoder
 import operator
 import math
+from datetime import datetime
+import os
 
 
 class CreateToolTip(object):
@@ -69,10 +71,18 @@ def getPlayer(name):
             return player
 
 
-class League:
+class Game:
+    def __init__(self, white, black, result, date):
+        self.white = white  # Jugador con blancas
+        self.black = black  # Jugador con negras
+        self.result = result  # 1 si ganan blancas, 0 si ganan negras, 0.5 tablas
+        self.date = date
 
-    def __init__(self, players):
+
+class League:
+    def __init__(self, players, games=None):
         self.players = players
+        self.games = games if games else []
 
 
 class Player:
@@ -92,16 +102,21 @@ def toJSON(self):
 
 
 def customDecoder(Dict):
-    if 'name' in Dict and 'rating' in Dict:
+    if 'name' in Dict:
+        # Si no tiene rating, asignar 1000 como valor por defecto
+        if 'rating' not in Dict:
+            Dict['rating'] = 500
         return Player(**Dict)
     elif 'players' in Dict:
         return League(**Dict)
+    elif 'white' in Dict and 'black' in Dict and 'result' in Dict:
+        return Game(**Dict)
     else:
         return Dict
 
 
 def jsonIntoObj(jsonFile):
-    with open(jsonFile, "r") as r:
+    with open(jsonFile, "r", encoding='utf-8') as r:
         return json.loads(r.read(), object_hook=customDecoder)
 
 
@@ -112,54 +127,186 @@ def objIntoJson(jsonFile, LeagueToDump):
 def sortObject(objectForUse):
     return sorted(objectForUse.players, key=lambda x: int(x.rating), reverse=True)
 
-league = jsonIntoObj("league.json")
+# Obtener el directorio del script actual
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Usar os.path.join para crear rutas relativas al script
+league = jsonIntoObj(os.path.join(script_dir, "league.json"))
+
+def calculate_current_ratings():
+    # Comenzar con ratings iniciales
+    start_league = jsonIntoObj(os.path.join(script_dir, "start.json"))
+    current_ratings = {player.name: player.rating for player in start_league.players}
+    
+    # Aplicar todos los juegos en orden cronológico
+    for game in league.games:
+        white_rating = current_ratings[game.white]
+        black_rating = current_ratings[game.black]
+        
+        new_white, new_black = getElo(white_rating, black_rating, 50, game.result)
+        current_ratings[game.white] = new_white
+        current_ratings[game.black] = new_black
+    
+    return current_ratings
 
 def getLeagueTable(inputLeague):
-    sortedList = sortObject(inputLeague)
+    current_ratings = calculate_current_ratings()
+    
+    # Crear lista de jugadores con ratings actuales
+    players_with_ratings = [
+        Player(current_ratings[p.name], p.name) 
+        for p in inputLeague.players
+    ]
+    
+    # Ordenar por rating
+    sortedList = sorted(players_with_ratings, 
+                       key=lambda x: int(x.rating), 
+                       reverse=True)
+    
     lf = ttk.LabelFrame(root, text='Chess League')
     lf.grid(column=0, row=0, padx=20, pady=20)
-
-    alignment_var = tk.StringVar()
-    alignments = ('Left', 'Center', 'Right')
-
-    for i in range(len(inputLeague.players)):
-        tk.Label(lf, text=str(i + 1) + ". " + sortedList[i].name + ": " + str(sortedList[i].rating)).pack()
-
+    
+    for i, player in enumerate(sortedList):
+        tk.Label(lf, text=f"{i + 1}. {player.name}: {player.rating}").pack()
 
 def writeStandings(param, leagueForDump):
-    with open(param, "w") as w:
+    with open(param, "w", encoding='utf-8') as w:
         w.write(objIntoJson(param, leagueForDump))
         w.close()
 
+
+def get_player_names():
+    # Obtener lista de nombres de jugadores
+    return [player.name for player in league.players]
+
+def recordResults():
+    white = getPlayer(player1_combo.get())  # Usar combobox en lugar de Entry
+    black = getPlayer(player2_combo.get())  # Usar combobox en lugar de Entry
+    result = result_var.get()
+    
+    game = Game(white.name, black.name, result, 
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    league.games.append(game)
+    
+    getLeagueTable(league)
+    writeStandings("league.json", league)
+
+def update_player_lists():
+    # Actualizar las listas de jugadores en los comboboxes
+    players = get_player_names()
+    player1_combo['values'] = players
+    player2_combo['values'] = players
 
 def addingPlayer():
     name = playerEntry.get()
     league.players.append(Player(1000, name))
     writeStandings("league.json", league)
     getLeagueTable(league)
+    update_player_lists()  # Actualizar comboboxes cuando se agrega un jugador
 
+def get_last_colors():
+    # Obtener el último juego entre dos jugadores seleccionados
+    player1 = player1_combo.get()
+    player2 = player2_combo.get()
+    
+    if not player1 or not player2:
+        return None, None
+        
+    for game in reversed(league.games):
+        if (game.white == player1 and game.black == player2) or \
+           (game.white == player2 and game.black == player1):
+            return (game.white, game.black)
+    return None, None
 
-def recordResults():
-    player1 = getPlayer(player1Entry.get())
-    player2 = getPlayer(player2Entry.get())
-    resultOfGame = int(resultEntry.get())
-    league.players[league.players.index(player1)].rating, league.players[
-        league.players.index(player2)].rating = getElo(player1.rating, player2.rating, 50, resultOfGame)
-    getLeagueTable(league)
-    writeStandings("league.json", league)
+def get_player_game_counts():
+    # Diccionario para contar juegos por jugador
+    player_counts = {p.name: 0 for p in league.players}
+    # Diccionario para contar juegos entre pares de jugadores
+    pair_counts = {}
+    
+    for game in league.games:
+        player_counts[game.white] += 1
+        player_counts[game.black] += 1
+        
+        # Ordenar el par para consistencia
+        pair = tuple(sorted([game.white, game.black]))
+        pair_counts[pair] = pair_counts.get(pair, 0) + 1
+    
+    return player_counts, pair_counts
 
+def get_last_game_color(player):
+    # Obtener el último color que usó un jugador
+    for game in reversed(league.games):
+        if game.white == player:
+            return 'white'
+        if game.black == player:
+            return 'black'
+    return None
 
-def resetLeague():
-    for player in league.players:
-        player.rating = 1000
-        getLeagueTable(league)
-        writeStandings("league.json", league)
-
+def create_match():
+    player_counts, pair_counts = get_player_game_counts()
+    players = [p.name for p in league.players]
+    
+    # Encontrar todas las posibles parejas y sus puntuaciones
+    pairs = []
+    for i, p1 in enumerate(players):
+        for p2 in players[i+1:]:
+            pair = tuple(sorted([p1, p2]))
+            games_between = pair_counts.get(pair, 0)
+            
+            # Calcular puntuación (menor es mejor)
+            score = games_between * 10  # Prioridad alta a parejas con pocos juegos
+            
+            # Penalizar si algún jugador tiene muchos más juegos que el promedio
+            avg_games = sum(player_counts.values()) / len(player_counts)
+            score += abs(player_counts[p1] - avg_games)
+            score += abs(player_counts[p2] - avg_games)
+            
+            # Agregar algo de aleatoriedad a la puntuación
+            from random import uniform
+            score += uniform(0, 5)  # Agregar entre 0 y 5 puntos aleatorios
+            
+            pairs.append((score, p1, p2))
+    
+    # Ordenar por puntuación y tomar uno de los mejores pares
+    pairs.sort()
+    from random import randint
+    # Tomar un par aleatorio entre los 3 mejores
+    selected_index = randint(0, min(2, len(pairs)-1))
+    if not pairs:
+        return
+    
+    _, p1, p2 = pairs[selected_index]
+    
+    # Decidir colores basado en historial
+    p1_last_color = get_last_game_color(p1)
+    p2_last_color = get_last_game_color(p2)
+    
+    # Asignar colores priorizando alternancia
+    if p1_last_color == 'white' and p2_last_color != 'black':
+        white, black = p2, p1
+    elif p2_last_color == 'white' and p1_last_color != 'black':
+        white, black = p1, p2
+    elif p1_last_color == 'black':
+        white, black = p1, p2
+    elif p2_last_color == 'black':
+        white, black = p2, p1
+    else:
+        # Si no hay historial o es ambiguo, asignar aleatoriamente
+        from random import choice
+        if choice([True, False]):
+            white, black = p1, p2
+        else:
+            white, black = p2, p1
+    
+    # Actualizar los comboboxes
+    player1_combo.set(white)
+    player2_combo.set(black)
 
 root = tk.Tk()
 root.title('Chess League')
 
-window_width = 300
+window_width = 500
 window_height = 800
 
 screen_width = root.winfo_screenwidth()
@@ -175,38 +322,49 @@ getLeagueTable(league)
 
 addPlayersPanel = ttk.LabelFrame(root, text='Add Players')
 addPlayersPanel.grid(column=1, row=0, padx=20, pady=20)
-addPlayersPanel.place(x=145, y=5)
+addPlayersPanel.place(x=245, y=5)
 
 recordGamePanel = ttk.LabelFrame(root, text="Record Game")
 recordGamePanel.grid(column=1, row=3, padx=10, pady=20)
-recordGamePanel.place(x=145, y=100)
+recordGamePanel.place(x=245, y=100)
 
-ttk.Label(recordGamePanel, text="Player 1: ").pack()
-player1Entry = tk.Entry(recordGamePanel)
+ttk.Label(recordGamePanel, text="White: ").pack()
+player1_combo = ttk.Combobox(recordGamePanel, values=get_player_names(), state='readonly')
+player1_combo.pack()
 
-player2Entry = tk.Entry(recordGamePanel)
-playerEntry = tk.Entry(addPlayersPanel)
-
-player1Entry.pack()
-
-ttk.Label(recordGamePanel, text="Player 2: ").pack()
-player2Entry.pack()
-resultLabel = ttk.Label(recordGamePanel, text="Result:  ")
+ttk.Label(recordGamePanel, text="Black: ").pack()
+player2_combo = ttk.Combobox(recordGamePanel, values=get_player_names(), state='readonly')
+player2_combo.pack()
+resultLabel = ttk.Label(recordGamePanel, text="Result:")
 resultLabel.pack()
-tooltip = CreateToolTip(resultLabel, "Type 1 if player 1 won the game, 0.5 if it was a draw and 0 if player 2 won the "
+tooltip = CreateToolTip(resultLabel, "Type 1 if white won the game, 0.5 if it was a draw and 0 if black won the "
                                      "game")
-resultEntry = ttk.Entry(recordGamePanel)
-resultEntry.pack()
+
+# Variable para los radio buttons
+result_var = tk.DoubleVar(value=1)  # Default to white wins
+
+# Frame para los radio buttons
+result_frame = ttk.Frame(recordGamePanel)
+result_frame.pack(pady=5)
+
+ttk.Radiobutton(result_frame, text="White wins", variable=result_var, value=1.0).pack(side=tk.LEFT, padx=5)
+ttk.Radiobutton(result_frame, text="Draw", variable=result_var, value=0.5).pack(side=tk.LEFT, padx=5)
+ttk.Radiobutton(result_frame, text="Black wins", variable=result_var, value=0.0).pack(side=tk.LEFT, padx=5)
+
+playerEntry = tk.Entry(addPlayersPanel)
 playerEntry.pack()
 ttk.Button(addPlayersPanel, text="Add", command=addingPlayer).pack()
+ttk.Button(recordGamePanel, text="Create Match", command=create_match).pack(pady=5)
 ttk.Button(recordGamePanel, text="Record Results", command=recordResults).pack()
 
 
+# Comentamos el panel y botón de reset
+"""
 panelReset = ttk.LabelFrame(root, text="Reset League standings")
 panelReset.grid(column=1, row=3, padx=10, pady=20)
-panelReset.place(x=145, y=275)
+panelReset.place(x=245, y=275)
 ttk.Button(panelReset, text="Reset", command=resetLeague).pack()
-
+"""
 
 root.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
 root.resizable(False, False)

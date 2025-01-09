@@ -1,31 +1,11 @@
 {
-    "games": [
-        {
-            "black": "Mat\u00edas Soto",
-            "date": "2025-01-09 15:30:00",
-            "result": 1,
-            "white": "Leonardo Gonzalez"
-        },
-        {
-            "black": "Alonso Bur\u00f3n",
-            "date": "2025-01-09 17:25:00",
-            "result": 1,
-            "white": "Camilo Aranda"
-        },
-        {
-            "black": "Luis C\u00e1rdenas",
-            "date": "2025-01-09 17:52:35",
-            "result": 0.0,
-            "white": "Marcos Waltemath"
-        }
-    ],
     "players": [
         {
-            "name": "Alonso Bur\u00f3n",
+            "name": "Alonso Burón",
             "rating": 500
         },
         {
-            "name": "Luis C\u00e1rdenas",
+            "name": "Luis Cárdenas",
             "rating": 500
         },
         {
@@ -37,7 +17,7 @@
             "rating": 500
         },
         {
-            "name": "Mat\u00edas Soto",
+            "name": "Matías Soto",
             "rating": 500
         },
         {
@@ -54,6 +34,10 @@
         },
         {
             "name": "Ignacio Pereira",
+            "rating": 500
+        },
+        {
+            "name": "Felipe Avilés",
             "rating": 500
         }
     ]
