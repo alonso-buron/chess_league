@@ -9,7 +9,7 @@
                     <tr>
                         <th><i class="fas fa-chess-pawn text-white-piece me-2"></i>Blancas</th>
                         <th><i class="fas fa-star rating-star me-2"></i>ELO</th>
-                        <th><i class="fas fa-trophy"></i></th>
+                        <th class="text-center"><i class="fas fa-trophy"></i></th>
                         <th><i class="fas fa-star rating-star me-2"></i>ELO</th>
                         <th><i class="fas fa-chess-pawn text-black-piece me-2"></i>Negras</th>
                         <th><i class="far fa-calendar-alt me-2"></i>Fecha</th>
@@ -28,7 +28,23 @@
                                 <span class="elo-change elo-down">{{ game.white_change }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ game.result }}</td>
+                        <td class="text-center">
+                            {% if game.result == 1.0 %}
+                                <div class="d-flex justify-content-center align-items-center" style="width: 80px; margin: 0 auto;">
+                                    <i class="fas fa-crown text-warning"></i>
+                                    <i class="fas fa-chess-pawn text-white-piece mx-2"></i>
+                                    <i class="fas fa-fw invisible"></i>
+                                </div>
+                            {% elif game.result == 0.0 %}
+                                <div class="d-flex justify-content-center align-items-center" style="width: 80px; margin: 0 auto;">
+                                    <i class="fas fa-fw invisible"></i>
+                                    <i class="fas fa-chess-pawn text-black-piece mx-2"></i>
+                                    <i class="fas fa-crown text-warning"></i>
+                                </div>
+                            {% else %}
+                                ½
+                            {% endif %}
+                        </td>
                         <td>
                             {{ game.black_rating }}
                             {% if game.black_change > 0 %}
