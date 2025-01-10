@@ -537,6 +537,31 @@
         .elo-final.negative {
             color: #dc3545;  /* Rojo para bajadas */
         }
+
+        /* Estilos para los medallistas */
+        .gold-medal {
+            background-color: rgba(255, 215, 0, 0.1) !important;
+        }
+        .silver-medal {
+            background-color: rgba(192, 192, 192, 0.1) !important;
+        }
+        .bronze-medal {
+            background-color: rgba(205, 127, 50, 0.1) !important;
+        }
+        .medal-icon {
+            margin-left: 5px;
+            font-size: 1.2em;
+        }
+        /* Estilo para el último lugar */
+        .last-place {
+            background-color: rgba(220, 53, 69, 0.05) !important;
+        }
+        .last-place-icon {
+            margin-left: 5px;
+            font-size: 1.1em;
+            color: #dc3545;
+            cursor: help;
+        }
     </style>
 </head>
 <body>
@@ -574,64 +599,36 @@
             </div>
         </nav>
 
-        {% if current_user.is_authenticated and (is_admin or current_user.player_name) %}
         <div class="mb-4">
-            <div class="form-title">
-                <h2>Agregar Partida</h2>
-                {% if not is_admin %}
-                <small class="text-muted fst-italic">
-                    <i class="bi bi-info-circle"></i>
-                    Solo puedes agregar partidas en las que hayas participado
-                </small>
-                {% endif %}
-            </div>
-            <form action="{{ url_for('add_game') }}" method="post" class="form-inline">
-                <div class="form-row">
-                    <div class="form-selectors">
-                        <div class="d-flex align-items-center">
-                            <span class="selector-emoji">⚪</span>
-                            <select name="white" id="white-select" class="form-select" required>
-                                <option value="">Seleccionar jugador</option>
-                                {% for player in players|sort(attribute='display_name') %}
-                                <option value="{{ player.id }}">{{ player.display_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <span class="selector-emoji">⚫</span>
-                            <select name="black" id="black-select" class="form-select" required>
-                                <option value="">Seleccionar jugador</option>
-                                {% for player in players|sort(attribute='display_name') %}
-                                <option value="{{ player.id }}">{{ player.display_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <span class="selector-emoji">👑</span>
-                            <select name="result" class="form-select" required>
-                                <option value="">Seleccionar resultado</option>
-                                <option value="1">Blancas</option>
-                                <option value="0.5">Empate</option>
-                                <option value="0">Negras</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Agregar Partida</button>
-                    </div>
-                    <div class="form-buttons">
-                        {% if current_user.is_authenticated and current_user.player_name %}
-                        <button type="button" id="suggest-my-match" class="btn btn-secondary">Sugerir Partida Para Mí</button>
-                        {% endif %}
-                        <button type="button" id="suggest-random" class="btn btn-outline-secondary">Sugerir Partida Random</button>
-                        {% if is_admin %}
-                        <form action="{{ url_for('reset_database') }}" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro? Esto borrará TODOS los datos de la liga.');">
-                            <button type="submit" class="btn btn-danger">Reiniciar Base de Datos</button>
-                        </form>
-                        {% endif %}
-                    </div>
+            <div class="d-flex justify-content-between gap-2">
+                <!-- Botones de agregar a la izquierda -->
+                <div class="d-flex gap-2">
+                    {% if current_user.is_authenticated and (is_admin or current_user.player_name) %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addGameModal">
+                        Agregar Partida
+                    </button>
+                    {% endif %}
+                    {% if is_admin %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPlayerModal">
+                        Agregar Jugador
+                    </button>
+                    {% endif %}
                 </div>
-            </form>
+
+                <!-- Botones de sugerir y reiniciar a la derecha -->
+                <div class="form-buttons">
+                    {% if current_user.is_authenticated and current_user.player_name %}
+                    <button type="button" id="suggest-my-match" class="btn btn-secondary">Sugerir Partida Para Mí</button>
+                    {% endif %}
+                    <button type="button" id="suggest-random" class="btn btn-outline-secondary">Sugerir Partida Random</button>
+                    {% if is_admin %}
+                    <form action="{{ url_for('reset_database') }}" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro? Esto borrará TODOS los datos de la liga.');">
+                        <button type="submit" class="btn btn-danger">Reiniciar Base de Datos</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-        {% endif %}
 
         <!-- Botones de sugerencia -->
         <!-- <div class="mb-4">
@@ -660,10 +657,21 @@
                             </thead>
                             <tbody>
                                 {% for player in players %}
-                                <tr data-player-id="{{ player.id if player.id else '' }}" data-player-name="{{ player.name if player.name else '' }}">
+                                <tr data-player-id="{{ player.id if player.id else '' }}" 
+                                    data-player-name="{{ player.name if player.name else '' }}"
+                                    class="{% if loop.index == 1 %}gold-medal{% elif loop.index == 2 %}silver-medal{% elif loop.index == 3 %}bronze-medal{% elif loop.index == players|length %}last-place{% endif %}">
                                     <td>{{ loop.index }}</td>
                                     <td>
                                         {{ player.display_name }}
+                                        {% if loop.index == 1 %}
+                                            <span class="medal-icon">👑</span>
+                                        {% elif loop.index == 2 %}
+                                            <span class="medal-icon">🥈</span>
+                                        {% elif loop.index == 3 %}
+                                            <span class="medal-icon">🥉</span>
+                                        {% elif loop.index == players|length %}
+                                            <span class="last-place-icon" title="Al debe">🚩</span>
+                                        {% endif %}
                                         {% if player.warning %}
                                             <span class="warning-icon" title="Faltan partidas esta semana">⚠️</span>
                                         {% endif %}
@@ -747,6 +755,70 @@
             </div>
         </div>
 
+        <!-- Modal de Agregar Partida -->
+        {% if current_user.is_authenticated and (is_admin or current_user.player_name) %}
+        <div class="modal fade" id="addGameModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Agregar Partida</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% if not is_admin %}
+                        <small class="text-muted fst-italic d-block mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            Solo puedes agregar partidas en las que hayas participado
+                        </small>
+                        {% endif %}
+                        <form id="addGameForm" action="{{ url_for('add_game') }}" method="post">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Jugador Blancas</label>
+                                <div class="d-flex align-items-center">
+                                    <span class="selector-emoji">⚪</span>
+                                    <select name="white" class="form-select" required>
+                                        <option value="">Seleccionar jugador</option>
+                                        {% for player in players|sort(attribute='display_name') %}
+                                        <option value="{{ player.id }}">{{ player.display_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label">Jugador Negras</label>
+                                <div class="d-flex align-items-center">
+                                    <span class="selector-emoji">⚫</span>
+                                    <select name="black" class="form-select" required>
+                                        <option value="">Seleccionar jugador</option>
+                                        {% for player in players|sort(attribute='display_name') %}
+                                        <option value="{{ player.id }}">{{ player.display_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label">Resultado</label>
+                                <div class="d-flex align-items-center">
+                                    <span class="selector-emoji">👑</span>
+                                    <select name="result" class="form-select" required>
+                                        <option value="">Seleccionar resultado</option>
+                                        <option value="1">Ganan Blancas</option>
+                                        <option value="0.5">Empate</option>
+                                        <option value="0">Ganan Negras</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" form="addGameForm" class="btn btn-primary">Agregar Partida</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Modal de Sugerencia -->
         <div class="modal fade" id="suggestModal" tabindex="-1">
             <div class="modal-dialog">
@@ -788,6 +860,36 @@
                 </div>
             </div>
         </div>
+
+        <!-- Agregar el modal al final del body, junto al modal de sugerencias -->
+        {% if current_user.is_admin %}
+        <div class="modal fade" id="addPlayerModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Agregar Nuevo Jugador</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addPlayerForm" action="{{ url_for('add_player') }}" method="post">
+                            <div class="form-group mb-3">
+                                <label for="player_name" class="form-label">Nombre del Jugador</label>
+                                <input type="text" class="form-control" id="player_name" name="player_name" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="initial_rating" class="form-label">Rating Inicial</label>
+                                <input type="number" class="form-control" id="initial_rating" name="initial_rating" required>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" form="addPlayerForm" class="btn btn-primary">Agregar Jugador</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <script>
