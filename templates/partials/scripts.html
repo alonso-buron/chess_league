@@ -202,16 +202,32 @@
         document.querySelectorAll('.suggest-game-btn').forEach(btn => btn.classList.remove('active'));
         isSuggestForMe = false;  // Resetear el modo al cerrar
     });
-</script>
 
-<!-- Vercel Analytics -->
-<script>
-    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
+    // Inicializar Vercel Analytics y Speed Insights cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar Analytics
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+        
+        // Cargar scripts de Vercel
+        const loadScript = (src) => {
+            const script = document.createElement('script');
+            script.defer = true;
+            script.src = src;
+            document.body.appendChild(script);
+            return script;
+        };
 
-<!-- Vercel Speed Insights -->
-<script type="module">
-    import { injectSpeedInsights } from 'https://cdn.skypack.dev/@vercel/speed-insights';
-    injectSpeedInsights();
+        // Cargar Analytics
+        const analyticsScript = loadScript('/_vercel/insights/script.js');
+        analyticsScript.onload = () => {
+            console.log('Vercel Analytics loaded');
+            window.va('event', 'page_view');
+        };
+
+        // Cargar Speed Insights
+        const speedScript = loadScript('/_vercel/speed-insights/script.js');
+        speedScript.onload = () => {
+            console.log('Vercel Speed Insights loaded');
+        };
+    });
 </script> 
