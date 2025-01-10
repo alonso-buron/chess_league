@@ -15,12 +15,21 @@
 2025-01-10 14:08:11,817 - werkzeug - INFO -  * Restarting with stat
 2025-01-10 14:27:49,582 - werkzeug - INFO -  * Restarting with stat
 2025-01-10 14:28:43,931 - werkzeug - INFO -  * Restarting with stat
-025 13:54:52] "GET / HTTP/1.1" 200 -
-2025-01-10 13:55:52,323 - werkzeug - INFO - 127.0.0.1 - - [10/Jan/2025 13:55:52] "GET / HTTP/1.1" 200 -
-2025-01-10 13:56:44,580 - werkzeug - INFO - 127.0.0.1 - - [10/Jan/2025 13:56:44] "GET / HTTP/1.1" 200 -
-2025-01-10 13:58:34,816 - werkzeug - INFO - 127.0.0.1 - - [10/Jan/2025 13:58:34] "GET / HTTP/1.1" 200 -
-2025-01-10 13:59:11,891 - werkzeug - INFO - 127.0.0.1 - - [10/Jan/2025 13:59:11] "GET / HTTP/1.1" 200 -
-2025-01-10 13:59:50,906 - werkzeug - INFO - 127.0.0.1 - - [10/Jan/2025 13:59:50] "GET / HTTP/1.1" 200 -
-2025-01-10 14:00:24,197 - werkzeug - INFO - 127.0.0.1 - - [10/Jan/2025 14:00:24] "GET / HTTP/1.1" 200 -
+2025-01-10 14:33:15,706 - werkzeug - INFO -  * Restarting with stat
+2025-01-10 14:33:32,041 - werkzeug - INFO -  * Restarting with stat
+2025-01-10 14:33:49,328 - werkzeug - INFO -  * Restarting with stat
+2025-01-10 14:34:06,735 - werkzeug - INFO -  * Restarting with stat
+2025-01-10 14:34:14,897 - werkzeug - INFO -  * Restarting with stat
+2025-01-10 14:35:40,217 - werkzeug - INFO -  * Restarting with stat
+2025-01-10 14:37:20,066 - werkzeug - INFO -  * Restarting with stat
+2025-01-10 14:37:47,637 - werkzeug - INFO -  * Restarting with stat
+2025-01-10 14:37:54,753 - werkzeug - INFO -  * Restarting with stat
+[10/Jan/2025 14:00:24] "GET / HTTP/1.1" 200 -
 2025-01-10 14:01:25,340 - werkzeug - INFO - 127.0.0.1 - - [10/Jan/2025 14:01:25] "GET / HTTP/1.1" 200 -
 2025-01-10 14:02:48,242 - werkzeug - INFO -  * Detected change in 'C:\\Users\\AlonsoBuron\\code\\chess_league\\Chess-ELO-League\\app.py', reloading
+2025-01-10 14:33:19,732 - WARNING -  * Debugger is active!
+2025-01-10 14:33:19,740 - INFO -  * Debugger PIN: 260-088-526
+2025-01-10 14:33:32,004 - INFO -  * Detected change in 'C:\\Users\\AlonsoBuron\\code\\chess_league\\Chess-ELO-League\\app.py', reloading
+2025-01-10 14:33:36,004 - WARNING -  * Debugger is active!
+2025-01-10 14:33:36,011 - INFO -  * Debugger PIN: 260-088-526
+2025-01-10 14:33:49,285 - INFO -  * Detected change in 'C:\\Users\\AlonsoBuron\\code\\chess_league\\Chess-ELO-League\\app.py', reloading

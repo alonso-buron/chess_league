@@ -646,20 +646,22 @@ def login():
                 if ip in login_attempts:
                     del login_attempts[ip]
                 
-                logger.info(f"Login exitoso para usuario: {username}")
+                app.logger.info(f"Login exitoso para usuario: {username}")
                 return redirect(url_for('index'))
             
             # Incrementar contador de intentos fallidos
             attempts = login_attempts.get(ip, (0, now))[0] + 1
             login_attempts[ip] = (attempts, now)
             
-            logger.warning(f"Login fallido para usuario: {username}")
+            app.logger.warning(f"Login fallido para usuario: {username}")
             flash('Usuario o contraseña incorrectos')
             
+        except psycopg2.Error as e:
+            app.logger.error(f"Error de base de datos en login: {str(e)}")
+            flash('Error al conectar con la base de datos. Por favor intenta más tarde.')
         except Exception as e:
+            app.logger.error(f"Error inesperado en login: {str(e)}")
             flash('Error al intentar iniciar sesión. Por favor intenta más tarde.')
-            return render_template('login.html')
-            
         finally:
             if cur:
                 cur.close()
@@ -667,7 +669,7 @@ def login():
                 try:
                     conn.close()
                 except Exception as e:
-                    logger.error(f"Error al cerrar conexión: {str(e)}")
+                    app.logger.error(f"Error al cerrar conexión: {str(e)}")
     
     return render_template('login.html')
 
@@ -730,8 +732,8 @@ def register():
         password = request.form.get('password')
         player_name = request.form.get('player_name')
         
-        if not all([username, password]):  # player_name es opcional ahora
-            flash('Usuario y contraseña son requeridos')
+        if not all([username, password, player_name]):  # Ahora player_name es requerido
+            flash('Usuario, contraseña y jugador son requeridos')
             return render_template('register.html', players=get_players())
             
         conn = get_db()
@@ -744,17 +746,11 @@ def register():
                 flash('El nombre de usuario ya está en uso')
                 return render_template('register.html', players=get_players())
             
-            if player_name:    
-                # Verificar si el jugador existe y no está asociado a otro usuario
-                cur.execute('SELECT name FROM players WHERE name = %s', (player_name,))
-                if not cur.fetchone():
-                    flash('El jugador no existe en la liga')
-                    return render_template('register.html', players=get_players())
-                    
-                cur.execute('SELECT id FROM users WHERE player_name = %s', (player_name,))
-                if cur.fetchone():
-                    flash('Este jugador ya está asociado a otro usuario')
-                    return render_template('register.html', players=get_players())
+            # Verificar si el jugador existe
+            cur.execute('SELECT name FROM players WHERE name = %s', (player_name,))
+            if not cur.fetchone():
+                flash('El jugador no existe en la liga')
+                return render_template('register.html', players=get_players())
             
             # Crear el usuario
             cur.execute(
@@ -763,17 +759,23 @@ def register():
             )
             
             conn.commit()
+            app.logger.info(f"Usuario creado exitosamente: {username} asociado a jugador: {player_name}")
             flash('Usuario creado exitosamente')
             return redirect(url_for('login'))
             
         except Exception as e:
-            logger.error(f"Error en registro: {str(e)}", exc_info=True)
+            app.logger.error(f"Error en registro: {str(e)}")
             flash('Error al crear el usuario. Por favor intenta más tarde.')
             return render_template('register.html', players=get_players())
             
         finally:
-            cur.close()
-            conn.close()
+            if cur:
+                cur.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception as e:
+                    app.logger.error(f"Error al cerrar conexión: {str(e)}")
     
     return render_template('register.html', players=get_players())
 

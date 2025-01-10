@@ -122,7 +122,7 @@
     function suggestGameForMe() {
         isSuggestForMe = true;
         const players = {{ players|tojson }};
-        const currentPlayer = {{ current_user.player_name|tojson }};
+        const currentPlayer = {{ (current_user.player_name if not current_user.is_anonymous else None)|tojson }};
         if (players.length < 2) return;
         
         // Encontrar el jugador actual en la lista

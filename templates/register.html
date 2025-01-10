@@ -17,6 +17,16 @@
                         <label class="form-label">Contraseña</label>
                         <input type="password" name="password" class="form-control" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Jugador</label>
+                        <select name="player_name" class="form-select" required>
+                            <option value="">Selecciona un jugador</option>
+                            {% for player in players %}
+                            <option value="{{ player.name }}">{{ player.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Selecciona el jugador que representarás en la liga</small>
+                    </div>
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-user-plus"></i> Registrarse
                     </button>
