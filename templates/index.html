@@ -560,7 +560,25 @@
             margin-left: 5px;
             font-size: 1.1em;
             color: #dc3545;
-            cursor: help;
+            position: relative;
+            cursor: pointer;
+        }
+
+        /* Estilo personalizado para el tooltip */
+        .last-place-icon:hover:after {
+            content: "Al debe";
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            margin-bottom: 5px;
+            z-index: 1000;
         }
     </style>
 </head>
@@ -670,7 +688,7 @@
                                         {% elif loop.index == 3 %}
                                             <span class="medal-icon">🥉</span>
                                         {% elif loop.index == players|length %}
-                                            <span class="last-place-icon" title="Al debe">🚩</span>
+                                            <span class="last-place-icon">🚩</span>
                                         {% endif %}
                                         {% if player.warning %}
                                             <span class="warning-icon" title="Faltan partidas esta semana">⚠️</span>
@@ -700,6 +718,7 @@
                                     <th>Negras</th>
                                     <th>ELO</th>
                                     <th>Fecha</th>
+                                    <th>Factor Lechuga</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -746,6 +765,11 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ game.date }}</td>
+                                    <td>
+                                        {% if game.has_lettuce_factor %}
+                                        <span title="El Lechuga era espectador" style="cursor: help;">🥬</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -808,6 +832,12 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="form-check mb-3">
+                                <input type="checkbox" class="form-check-input" id="has_lettuce_factor" name="has_lettuce_factor">
+                                <label class="form-check-label" for="has_lettuce_factor">
+                                    🥬 El Lechuga era espectador
+                                </label>
+                            </div>
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -846,6 +876,12 @@
                                     <option value="0.5">Empate</option>
                                     <option value="0">Ganan negras</option>
                                 </select>
+                            </div>
+                            <div class="form-check mt-3">
+                                <input type="checkbox" class="form-check-input" id="suggested_has_lettuce_factor" name="has_lettuce_factor">
+                                <label class="form-check-label" for="suggested_has_lettuce_factor">
+                                    🥬 El Lechuga era espectador
+                                </label>
                             </div>
                         </form>
                         {% endif %}

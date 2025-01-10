@@ -68,7 +68,8 @@ def init_db():
                 black TEXT NOT NULL REFERENCES players(name),
                 result REAL NOT NULL,
                 date TIMESTAMP NOT NULL,
-                added_by INTEGER REFERENCES users(id)
+                added_by INTEGER REFERENCES users(id),
+                has_lettuce_factor BOOLEAN NOT NULL DEFAULT FALSE
             )
         ''')
         
@@ -185,6 +186,7 @@ def load_league_data():
             )
             SELECT 
                 g.white, g.black, g.result, g.date,
+                g.has_lettuce_factor,
                 CASE 
                     WHEN NOW() >= %s THEN COALESCE(w1.games_this_week, 0)
                     ELSE 3
@@ -524,15 +526,40 @@ def add_game():
         flash('Resultado inválido')
         return redirect(url_for('index'))
     
-    cur.execute(
-        'INSERT INTO games (white, black, result, date, added_by) VALUES (%s, %s, %s, %s, %s)',
-        (white_name, black_name, result, datetime.now(), current_user.id)
-    )
+    try:
+        has_lettuce_factor = bool(request.form.get('has_lettuce_factor'))
+        
+        cur.execute(
+            'INSERT INTO games (white, black, result, date, added_by, has_lettuce_factor) VALUES (%s, %s, %s, %s, %s, %s)',
+            (white_name, black_name, result, datetime.now(), current_user.id, has_lettuce_factor)
+        )
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        logger.error(f"Error al crear juego: {str(e)}")
+        flash('Error al crear el juego')
+        # Intentar revertir los cambios en start.json
+        try:
+            with open('start.json', 'r', encoding='utf-8') as f:
+                start_data = json.load(f)
+            # Eliminar el juego si fue agregado
+            start_data['players'] = [p for p in start_data['players'] if p['name'] != white_name]
+            with open('start.json', 'w', encoding='utf-8') as f:
+                json.dump(start_data, f, indent=4, ensure_ascii=False)
+        except Exception as rollback_error:
+            logger.error(f"Error al revertir cambios en start.json: {str(rollback_error)}")
+        conn.rollback()
+        
+    finally:
+        cur.close()
+        conn.close()
     
-    conn.commit()
-    cur.close()
-    conn.close()
-    
+    # Recargar la página después de agregar el juego
     return redirect(url_for('index'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -891,6 +918,25 @@ def add_player():
     # Recargar la página después de agregar el jugador
     return redirect(url_for('index'))
 
+def add_lettuce_column():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute('''
+            ALTER TABLE games 
+            ADD COLUMN IF NOT EXISTS has_lettuce_factor BOOLEAN NOT NULL DEFAULT FALSE;
+        ''')
+        conn.commit()
+        print("Columna has_lettuce_factor agregada exitosamente")
+    except Exception as e:
+        print(f"Error agregando columna: {str(e)}")
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
+# Ejecutar una vez al inicio
 if __name__ == '__main__':
+    add_lettuce_column()
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000) 
