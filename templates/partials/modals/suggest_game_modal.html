@@ -6,29 +6,24 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="suggestedGameForm">
-                    <div class="form-group mb-3">
-                        <label class="form-label">Blancas</label>
-                        <select name="white" class="form-select" disabled>
-                            <option value="">Seleccionar jugador...</option>
-                            {% for player in players %}
-                            <option value="{{ player.id }}">{{ player.display_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label">Negras</label>
-                        <select name="black" class="form-select" disabled>
-                            <option value="">Seleccionar jugador...</option>
-                            {% for player in players %}
-                            <option value="{{ player.id }}">{{ player.display_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </form>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-chess-pawn text-white-piece me-2"></i>Blancas</label>
+                    <div class="suggested-player" id="whitePlayer">&nbsp;</div>
+                    <input type="hidden" id="whitePlayerId">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-chess-pawn text-black-piece me-2"></i>Negras</label>
+                    <div class="suggested-player" id="blackPlayer">&nbsp;</div>
+                    <input type="hidden" id="blackPlayerId">
+                </div>
+                <div id="matchInfo" class="text-center"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-info" id="anotherGameBtn">
+                    <i class="fas fa-dice me-2"></i>Otra partida
+                </button>
+                <button type="button" class="btn btn-primary" id="suggestGameBtn">Jugar</button>
             </div>
         </div>
     </div>

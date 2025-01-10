@@ -1,17 +1,20 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Barra de botones -->
-{% include "partials/action_buttons.html" %}
-
-        <div class="row flex-grow-1 overflow-auto" style="height: calc(100vh - 300px);">
-    <!-- Tabla de Rankings -->
-    {% include "partials/rankings_table.html" %}
+<div class="d-flex flex-column h-100">
+    <!-- Barra de botones -->
+    {% include "partials/action_buttons.html" %}
     
-    <!-- Tabla de Partidas -->
-    {% include "partials/games_table.html" %}
-        </div>
-
+    <!-- Contenedor de tablas -->
+    <div class="row tables-container">
+        <!-- Tabla de Rankings -->
+        {% include "partials/rankings_table.html" %}
+        
+        <!-- Tabla de Partidas -->
+        {% include "partials/games_table.html" %}
+                </div>
+            </div>
+            
 <!-- Modales -->
 {% include "partials/modals/add_game_modal.html" %}
 {% include "partials/modals/add_player_modal.html" %}

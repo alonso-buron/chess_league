@@ -10,12 +10,6 @@ import json
 from functools import wraps
 import time
 from werkzeug.middleware.proxy_fix import ProxyFix
-import logging
-import sys
-
-# Configurar logging
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Cargar variables de entorno desde .env en desarrollo
 load_dotenv()
@@ -111,7 +105,6 @@ def init_db():
         conn.commit()
         
     except Exception as e:
-        logger.error(f"Error en init_db: {str(e)}")
         conn.rollback()
         raise e
         
@@ -229,7 +222,6 @@ def load_league_data():
         players = [dict(row) for row in cur.fetchall()]
         
     except Exception as e:
-        logger.error(f"Error cargando datos de la liga: {str(e)}")
         games = []
         players = []
         
@@ -401,12 +393,32 @@ def index():
     
     # Procesar juegos y calcular cambios
     processed_games = []
-    historical_ratings = current_ratings.copy()  # Mantener una copia de los ratings históricos
+    historical_ratings = current_ratings.copy()
+    player_stats = {}  # Diccionario para mantener estadísticas de jugadores
     
     for game in games:
+        # Inicializar estadísticas si no existen
+        if game['white'] not in player_stats:
+            player_stats[game['white']] = {'white_games': 0, 'white_wins': 0, 'white_draws': 0,
+                                        'black_games': 0, 'black_wins': 0, 'black_draws': 0}
+        if game['black'] not in player_stats:
+            player_stats[game['black']] = {'white_games': 0, 'white_wins': 0, 'white_draws': 0,
+                                        'black_games': 0, 'black_wins': 0, 'black_draws': 0}
+        
+        # Actualizar estadísticas
+        player_stats[game['white']]['white_games'] += 1
+        player_stats[game['black']]['black_games'] += 1
+        
+        if game['result'] == '1.0':
+            player_stats[game['white']]['white_wins'] += 1
+        elif game['result'] == '0.0':
+            player_stats[game['black']]['black_wins'] += 1
+        else:  # '0.5'
+            player_stats[game['white']]['white_draws'] += 1
+            player_stats[game['black']]['black_draws'] += 1
+        
         # Verificar que ambos jugadores existan en current_ratings
         if game['white'] not in historical_ratings or game['black'] not in historical_ratings:
-            logger.error(f"Jugador no encontrado en ratings: {game['white']} o {game['black']}")
             continue
             
         white_rating = historical_ratings[game['white']]
@@ -439,15 +451,28 @@ def index():
     for p in players_data:
         # Verificar que el jugador exista en historical_ratings
         if p['name'] not in historical_ratings:
-            logger.error(f"Jugador no encontrado en ratings: {p['name']}")
             continue
             
+        # Calcular winrates
+        stats = player_stats.get(p['name'], {'white_games': 0, 'white_wins': 0, 'white_draws': 0,
+                                          'black_games': 0, 'black_wins': 0, 'black_draws': 0})
+        
+        white_winrate = 0 if stats['white_games'] == 0 else \
+            round((stats['white_wins'] + stats['white_draws'] * 0.5) / stats['white_games'] * 100, 1)
+        
+        black_winrate = 0 if stats['black_games'] == 0 else \
+            round((stats['black_wins'] + stats['black_draws'] * 0.5) / stats['black_games'] * 100, 1)
+        
         players.append({
             'id': p['id'],
             'name': p['name'],
             'display_name': format_name(p['name']),
-            'rating': historical_ratings[p['name']],  # Usar el rating final después de todos los juegos
+            'rating': historical_ratings[p['name']],
             'games_this_week': p['games_this_week'],
+            'white_winrate': white_winrate,
+            'black_winrate': black_winrate,
+            'white_games': stats['white_games'],
+            'black_games': stats['black_games'],
             'warning': p['games_this_week'] < 3
         })
     
@@ -529,6 +554,18 @@ def add_game():
     try:
         has_lettuce_factor = bool(request.form.get('has_lettuce_factor'))
         
+        # Verificar últimos enfrentamientos
+        cur.execute('''
+            SELECT COUNT(*) as recent_matches
+            FROM games 
+            WHERE (white = %s AND black = %s OR white = %s AND black = %s)
+            AND date >= NOW() - INTERVAL '7 days'
+        ''', (white_name, black_name, black_name, white_name))
+        
+        recent_matches = cur.fetchone()['recent_matches']
+        if recent_matches > 0:
+            return jsonify({'error': 'Estos jugadores ya se han enfrentado recientemente'}), 400
+        
         cur.execute(
             'INSERT INTO games (white, black, result, date, added_by, has_lettuce_factor) VALUES (%s, %s, %s, %s, %s, %s)',
             (white_name, black_name, result, datetime.now(), current_user.id, has_lettuce_factor)
@@ -573,9 +610,6 @@ def login():
         try:
             username = request.form.get('username')
             password = request.form.get('password')
-            
-            # Log de intento de login
-            logger.info(f"Intento de login para usuario: {username}")
             
             # Validación básica de entrada
             if not username or not password or len(username) > 50 or len(password) > 100:
@@ -623,7 +657,6 @@ def login():
             flash('Usuario o contraseña incorrectos')
             
         except Exception as e:
-            logger.error(f"Error en login: {str(e)}", exc_info=True)
             flash('Error al intentar iniciar sesión. Por favor intenta más tarde.')
             return render_template('login.html')
             
@@ -927,10 +960,69 @@ def add_lettuce_column():
             ADD COLUMN IF NOT EXISTS has_lettuce_factor BOOLEAN NOT NULL DEFAULT FALSE;
         ''')
         conn.commit()
-        print("Columna has_lettuce_factor agregada exitosamente")
     except Exception as e:
-        print(f"Error agregando columna: {str(e)}")
         conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/suggest_game', methods=['POST'])
+@rate_limit(max_requests=5, window=60)
+def suggest_game():
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Debes iniciar sesión para sugerir partidas'}), 401
+    
+    if not current_user.player_name:
+        return jsonify({'error': 'Debes estar asociado a un jugador para sugerir partidas'}), 403
+    
+    white_id = request.form.get('white_id')
+    black_id = request.form.get('black_id')
+    if not white_id or not black_id:
+        return jsonify({'error': 'Jugadores no especificados'}), 400
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        # Obtener información de ambos jugadores
+        cur.execute('SELECT name, display_name FROM players WHERE id IN (%s, %s)', (white_id, black_id))
+        players = cur.fetchall()
+        
+        if len(players) != 2:
+            return jsonify({'error': 'Jugadores no encontrados'}), 404
+        
+        # Obtener historial de colores de cada jugador
+        cur.execute('''
+            SELECT 
+                p.id,
+                p.name,
+                COUNT(CASE WHEN g.white = p.name THEN 1 END) as white_games,
+                COUNT(CASE WHEN g.black = p.name THEN 1 END) as black_games
+            FROM players p
+            LEFT JOIN games g ON p.name IN (g.white, g.black)
+            GROUP BY p.id, p.name
+        ''')
+        color_stats = {row['id']: {
+            'white_games': row['white_games'],
+            'black_games': row['black_games']
+        } for row in cur.fetchall()}
+        
+        # Asignar colores basado en el balance
+        if color_stats[white_id]['white_games'] > color_stats[black_id]['white_games']:
+            # Intercambiar jugadores si uno ha jugado mucho más de blancas
+            white_id, black_id = black_id, white_id
+        
+        # Aquí podrías agregar lógica para notificar a los jugadores
+        # Por ahora solo retornamos un mensaje de éxito
+        return jsonify({
+            'success': True,
+            'message': f'Partida sugerida: {players[0]["display_name"]} vs {players[1]["display_name"]}'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al sugerir partida: {str(e)}")
+        return jsonify({'error': 'Error al procesar la solicitud'}), 500
+        
     finally:
         cur.close()
         conn.close()

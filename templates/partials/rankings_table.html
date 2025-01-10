@@ -3,14 +3,16 @@
         <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-ranking-star"></i> Ranking</h5>
         </div>
-        <div class="table-responsive" style="max-height: calc(100vh - 200px);">
+        <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th><i class="fas fa-user"></i> Jugador</th>
-                        <th><i class="fas fa-star"></i> Rating</th>
-                        <th><i class="fas fa-gamepad"></i> Partidas</th>
+                        <th><i class="fas fa-user me-2"></i>Jugador</th>
+                        <th><i class="fas fa-star rating-star me-2"></i>ELO</th>
+                        <th><i class="fas fa-chess-pawn text-white-piece me-2"></i>Winrate</th>
+                        <th><i class="fas fa-chess-pawn text-black-piece me-2"></i>Winrate</th>
+                        <th><i class="fas fa-gamepad me-2"></i></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -33,7 +35,25 @@
                             {% endif %}
                         </td>
                         <td>{{ player.rating }}</td>
-                        <td>{{ player.games_this_week }}/3</td>
+                        <td>
+                            <span class="winrate {% if player.white_winrate >= 55 %}text-success{% elif player.white_winrate < 45 %}text-danger{% endif %}">
+                                {{ player.white_winrate }}%
+                                <small>
+                                    ({{ player.white_games }})
+                                </small>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="winrate {% if player.black_winrate >= 55 %}text-success{% elif player.black_winrate < 45 %}text-danger{% endif %}">
+                                {{ player.black_winrate }}%
+                                <small>
+                                    ({{ player.black_games }})
+                                </small>
+                            </span>
+                        </td>
+                        <td>
+                            <small class="weekly-games">{{ player.games_this_week }}/3</small>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

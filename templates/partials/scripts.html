@@ -16,21 +16,190 @@
         });
     });
 
+    // Crear una única instancia del modal
+    const suggestModal = new bootstrap.Modal(document.getElementById('suggestGameModal'));
+
+    // Variable para rastrear el modo de sugerencia
+    let isSuggestForMe = false;
+
     // Random game suggestion
     function suggestRandomGame() {
+        isSuggestForMe = false;
         const players = {{ players|tojson }};
         if (players.length < 2) return;
         
-        let player1, player2;
-        do {
-            player1 = players[Math.floor(Math.random() * players.length)];
-            player2 = players[Math.floor(Math.random() * players.length)];
-        } while (player1.id === player2.id);
+        // Función para calcular la diferencia de rating
+        const ratingDiff = (p1, p2) => Math.abs(p1.rating - p2.rating);
         
-        document.querySelector('#suggestedGameForm select[name="white"]').value = player1.id;
-        document.querySelector('#suggestedGameForm select[name="black"]').value = player2.id;
+        // Función para calcular el score de compatibilidad
+        const getMatchScore = (p1, p2) => {
+            const GAMES_NEEDED = 3;
+            
+            // Priorizar jugadores que no han jugado entre sí recientemente
+            const notPlayedScore = 1;
+            
+            // Priorizar jugadores que necesitan partidas
+            const gamesNeededScore = (
+                (GAMES_NEEDED - p1.games_this_week) + 
+                (GAMES_NEEDED - p2.games_this_week)
+            ) / (GAMES_NEEDED * 2);
+            
+            return (notPlayedScore * 0.3) + (gamesNeededScore * 0.7);
+        };
         
-        const modal = new bootstrap.Modal(document.getElementById('suggestGameModal'));
-        modal.show();
+        // Generar todas las posibles parejas y ordenarlas por score
+        let pairs = [];
+        for (let i = 0; i < players.length; i++) {
+            for (let j = i + 1; j < players.length; j++) {
+                pairs.push({
+                    white: players[i],
+                    black: players[j],
+                    score: getMatchScore(players[i], players[j])
+                });
+            }
+        }
+        
+        // Ordenar parejas por score y tomar una de las mejores aleatoriamente
+        pairs.sort((a, b) => b.score - a.score);
+        const topPairs = pairs.slice(0, 3);
+        const selectedPair = topPairs[Math.floor(Math.random() * topPairs.length)];
+        
+        // 50% de probabilidad de intercambiar colores
+        let player1 = selectedPair.white;
+        let player2 = selectedPair.black;
+        if (Math.random() < 0.5) {
+            [player1, player2] = [player2, player1];
+        }
+        
+        // Asegurarnos de que los elementos existen antes de modificarlos
+        const whitePlayerElement = document.getElementById('whitePlayer');
+        const blackPlayerElement = document.getElementById('blackPlayer');
+        const whitePlayerIdElement = document.getElementById('whitePlayerId');
+        const blackPlayerIdElement = document.getElementById('blackPlayerId');
+        const matchInfoElement = document.getElementById('matchInfo');
+        
+        if (!whitePlayerElement || !blackPlayerElement || !whitePlayerIdElement || 
+            !blackPlayerIdElement || !matchInfoElement) {
+            return;
+        }
+        
+        whitePlayerElement.textContent = player1.display_name;
+        blackPlayerElement.textContent = player2.display_name;
+        whitePlayerIdElement.value = player1.id;
+        blackPlayerIdElement.value = player2.id;
+        
+        // Mostrar información adicional sobre la sugerencia
+        const ratingDifference = Math.abs(player1.rating - player2.rating);
+        matchInfoElement.innerHTML = `
+            <small class="text-muted">
+                Diferencia de ELO: ${ratingDifference} puntos<br>
+                Partidas esta semana: ${player1.games_this_week}/3 vs ${player2.games_this_week}/3
+            </small>
+        `;
+        
+        suggestModal.show();
     }
+
+    // Conectar el botón "Jugar" con el modal de crear juego
+    document.getElementById('suggestGameBtn').addEventListener('click', function() {
+        const whiteId = document.getElementById('whitePlayerId').value;
+        const blackId = document.getElementById('blackPlayerId').value;
+        const whiteName = document.getElementById('whitePlayer').textContent;
+        const blackName = document.getElementById('blackPlayer').textContent;
+        
+        // Cerrar modal de sugerencia
+        bootstrap.Modal.getInstance(document.getElementById('suggestGameModal')).hide();
+        
+        // Abrir modal de crear juego con los jugadores preseleccionados
+        document.querySelector('#addGameModal select[name="white"]').value = whiteId;
+        document.querySelector('#addGameModal select[name="black"]').value = blackId;
+        
+        const addGameModal = new bootstrap.Modal(document.getElementById('addGameModal'));
+        addGameModal.show();
+    });
+
+    // Función para sugerir partida para el usuario actual
+    function suggestGameForMe() {
+        isSuggestForMe = true;
+        const players = {{ players|tojson }};
+        const currentPlayer = {{ current_user.player_name|tojson }};
+        if (players.length < 2) return;
+        
+        // Encontrar el jugador actual en la lista
+        const me = players.find(p => p.name === currentPlayer);
+        if (!me) return;
+        
+        // Filtrar jugadores excluyéndome
+        const otherPlayers = players.filter(p => p.name !== currentPlayer);
+        
+        // Función para calcular el score de compatibilidad
+        const getMatchScore = (opponent) => {
+            const GAMES_NEEDED = 3;
+            
+            // Priorizar jugadores que no han jugado entre sí recientemente
+            const notPlayedScore = 1;
+            
+            // Priorizar jugadores que necesitan partidas
+            const gamesNeededScore = (
+                (GAMES_NEEDED - me.games_this_week) + 
+                (GAMES_NEEDED - opponent.games_this_week)
+            ) / (GAMES_NEEDED * 2);
+            
+            // Dar más peso a la necesidad de partidas
+            return (notPlayedScore * 0.3) + (gamesNeededScore * 0.7);
+        };
+        
+        // Calcular scores para todos los oponentes posibles
+        const opponents = otherPlayers.map(opponent => ({
+            player: opponent,
+            score: getMatchScore(opponent)
+        }));
+        
+        // Ordenar por score y tomar uno de los mejores
+        opponents.sort((a, b) => b.score - a.score);
+        const topOpponents = opponents.slice(0, 3);
+        const selected = topOpponents[Math.floor(Math.random() * topOpponents.length)];
+        
+        // 50% de probabilidad de que yo juegue con blancas
+        let player1 = Math.random() < 0.5 ? me : selected.player;
+        let player2 = player1 === me ? selected.player : me;
+        
+        // Mostrar en el modal
+        const whitePlayerElement = document.getElementById('whitePlayer');
+        const blackPlayerElement = document.getElementById('blackPlayer');
+        const whitePlayerIdElement = document.getElementById('whitePlayerId');
+        const blackPlayerIdElement = document.getElementById('blackPlayerId');
+        const matchInfoElement = document.getElementById('matchInfo');
+        
+        whitePlayerElement.textContent = player1.display_name;
+        blackPlayerElement.textContent = player2.display_name;
+        whitePlayerIdElement.value = player1.id;
+        blackPlayerIdElement.value = player2.id;
+        
+        const ratingDifference = Math.abs(player1.rating - player2.rating);
+        matchInfoElement.innerHTML = `
+            <small class="text-muted">
+                Diferencia de ELO: ${ratingDifference} puntos<br>
+                Partidas esta semana: ${player1.games_this_week}/3 vs ${player2.games_this_week}/3
+            </small>
+        `;
+        
+        suggestModal.show();
+    }
+
+    // Manejar el botón de "Otra partida"
+    document.getElementById('anotherGameBtn').addEventListener('click', function() {
+        // Llamar a la función correspondiente
+        if (isSuggestForMe) {
+            suggestGameForMe();
+        } else {
+            suggestRandomGame();
+        }
+    });
+
+    // Limpiar estado de botones cuando se cierra el modal
+    document.getElementById('suggestGameModal').addEventListener('hidden.bs.modal', function () {
+        document.querySelectorAll('.suggest-game-btn').forEach(btn => btn.classList.remove('active'));
+        isSuggestForMe = false;  // Resetear el modo al cerrar
+    });
 </script> 

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required
 from app.models.user import User
 from app.database.connection import get_db
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime, timedelta
 import logging
 
@@ -81,4 +81,44 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('main.index')) 
+    return redirect(url_for('main.index'))
+
+@bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not username or not password:
+            flash('Usuario y contraseña son requeridos')
+            return render_template('register.html')
+            
+        conn = get_db()
+        cur = conn.cursor()
+        
+        try:
+            # Verificar si el usuario ya existe
+            cur.execute('SELECT id FROM users WHERE username = %s', (username,))
+            if cur.fetchone():
+                flash('El usuario ya existe')
+                return render_template('register.html')
+            
+            # Crear nuevo usuario
+            cur.execute(
+                'INSERT INTO users (username, password) VALUES (%s, %s)',
+                (username, generate_password_hash(password))
+            )
+            conn.commit()
+            flash('Usuario registrado exitosamente')
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            logging.error(f"Error en registro: {str(e)}")
+            flash('Error al registrar usuario')
+            return render_template('register.html')
+            
+        finally:
+            cur.close()
+            conn.close()
+    
+    return render_template('register.html') 

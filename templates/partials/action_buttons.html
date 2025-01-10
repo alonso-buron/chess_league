@@ -15,10 +15,10 @@
         
         <div>
             {% if current_user.is_authenticated %}
-                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#suggestGameModal">
-                    <i class="fas fa-bullseye"></i> Sugerir Partida Para Mí
+                <button class="btn btn-primary suggest-game-btn" onclick="suggestGameForMe(); this.classList.add('active')" {% if not current_user.is_authenticated or not current_user.player_name %}disabled{% endif %}>
+                    <i class="fas fa-chess me-2"></i>Sugerir partida para mí
                 </button>
-                <button type="button" class="btn btn-info" onclick="suggestRandomGame()">
+                <button type="button" class="btn btn-info suggest-game-btn" onclick="suggestRandomGame(); this.classList.add('active')">
                     <i class="fas fa-dice"></i> Sugerir Partida Random
                 </button>
             {% endif %}
