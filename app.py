@@ -41,26 +41,7 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
     
-    # Crear tablas
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            is_admin BOOLEAN NOT NULL DEFAULT FALSE
-        )
-    ''')
-    
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS games (
-            id SERIAL PRIMARY KEY,
-            white TEXT NOT NULL,
-            black TEXT NOT NULL,
-            result REAL NOT NULL,
-            date TIMESTAMP NOT NULL
-        )
-    ''')
-    
+    # Crear tablas si no existen
     cur.execute('''
         CREATE TABLE IF NOT EXISTS players (
             id SERIAL PRIMARY KEY,
@@ -69,12 +50,48 @@ def init_db():
         )
     ''')
     
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+            player_name TEXT REFERENCES players(name)
+        )
+    ''')
+    
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS games (
+            id SERIAL PRIMARY KEY,
+            white TEXT NOT NULL REFERENCES players(name),
+            black TEXT NOT NULL REFERENCES players(name),
+            result REAL NOT NULL,
+            date TIMESTAMP NOT NULL,
+            added_by INTEGER REFERENCES users(id)
+        )
+    ''')
+    
+    # Cargar jugadores iniciales desde start.json solo si la tabla está vacía
+    cur.execute('SELECT COUNT(*) FROM players')
+    if cur.fetchone()[0] == 0:
+        try:
+            with open('start.json', 'r', encoding='utf-8') as f:
+                start_data = json.load(f)
+                for player in start_data['players']:
+                    cur.execute(
+                        'INSERT INTO players (name, initial_rating) VALUES (%s, %s) ON CONFLICT (name) DO NOTHING',
+                        (player['name'], player['rating'])
+                    )
+        except Exception as e:
+            logger.error(f"Error cargando start.json: {str(e)}")
+    
     # Crear admin si no existe
     cur.execute(
         '''
         INSERT INTO users (username, password_hash, is_admin) 
         VALUES (%s, %s, %s)
-        ON CONFLICT (username) DO NOTHING
+        ON CONFLICT (username) DO UPDATE 
+        SET is_admin = EXCLUDED.is_admin
         ''',
         ('admin', generate_password_hash(os.environ.get('ADMIN_PASSWORD', 'admin')), True)
     )
@@ -84,21 +101,22 @@ def init_db():
     conn.close()
 
 class User(UserMixin):
-    def __init__(self, id, username, is_admin):
+    def __init__(self, id, username, is_admin, player_name=None):
         self.id = id
         self.username = username
         self.is_admin = is_admin
+        self.player_name = player_name
 
 @login_manager.user_loader
 def load_user(user_id):
     conn = get_db()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+    cur.execute('SELECT id, username, is_admin, COALESCE(player_name, NULL) as player_name FROM users WHERE id = %s', (user_id,))
     user = cur.fetchone()
     cur.close()
     conn.close()
     if user:
-        return User(user['id'], user['username'], user['is_admin'])
+        return User(user['id'], user['username'], user['is_admin'], user['player_name'])
     return None
 
 def load_league_data():
@@ -144,6 +162,7 @@ def load_league_data():
     # Una consulta para todos los jugadores y sus conteos
     cur.execute('''
         SELECT 
+            p.id,
             p.name,
             CASE 
                 WHEN NOW() >= %s THEN COALESCE(w.games_this_week, 0)
@@ -353,6 +372,7 @@ def index():
     
     # Preparar datos de jugadores
     players = [{
+        'id': p['id'],
         'name': p['name'],
         'display_name': format_name(p['name']),
         'rating': current_ratings[p['name']],
@@ -362,16 +382,29 @@ def index():
     
     players.sort(key=lambda x: x['rating'], reverse=True)
     
+    # Obtener el player_id del usuario actual si está logueado
+    current_player_id = None
+    if current_user.is_authenticated and current_user.player_name:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('SELECT id FROM players WHERE name = %s', (current_user.player_name,))
+        result = cur.fetchone()
+        if result:
+            current_player_id = result['id']
+        cur.close()
+        conn.close()
+    
     return render_template('index.html',
                          players=players,
                          games=processed_games,
-                         is_admin=current_user.is_admin if not current_user.is_anonymous else False)
+                         is_admin=current_user.is_admin if not current_user.is_anonymous else False,
+                         current_player_id=current_player_id)
 
 @app.route('/add_game', methods=['POST'])
 @login_required
 def add_game():
-    if not current_user.is_admin:
-        flash('Solo los administradores pueden agregar partidas')
+    if not current_user.is_admin and not current_user.player_name:
+        flash('No tienes permiso para agregar partidas')
         return redirect(url_for('index'))
         
     # Anti-spam para agregar partidas
@@ -386,13 +419,33 @@ def add_game():
     user_actions[user_id] = now
     
     # Validación de entrada
-    white = request.form.get('white')
-    black = request.form.get('black')
+    white_id = request.form.get('white')
+    black_id = request.form.get('black')
     result = request.form.get('result')
     
-    if not all([white, black, result]) or white == black:
+    if not all([white_id, black_id, result]) or white_id == black_id:
         flash('Datos inválidos')
         return redirect(url_for('index'))
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Obtener nombres de jugadores por ID
+    cur.execute('SELECT id, name FROM players WHERE id IN (%s, %s)', (white_id, black_id))
+    players = {str(row['id']): row['name'] for row in cur.fetchall()}
+    
+    if len(players) != 2:
+        flash('Jugadores no encontrados')
+        return redirect(url_for('index'))
+    
+    white_name = players[white_id]
+    black_name = players[black_id]
+        
+    # Verificar que el usuario sea parte del juego si no es admin
+    if not current_user.is_admin:
+        if current_user.player_name not in [white_name, black_name]:
+            flash('Solo puedes agregar partidas en las que hayas participado')
+            return redirect(url_for('index'))
         
     try:
         result = float(result)
@@ -402,12 +455,9 @@ def add_game():
         flash('Resultado inválido')
         return redirect(url_for('index'))
     
-    conn = get_db()
-    cur = conn.cursor()
-    
     cur.execute(
-        'INSERT INTO games (white, black, result, date) VALUES (%s, %s, %s, %s)',
-        (white, black, result, datetime.now())
+        'INSERT INTO games (white, black, result, date, added_by) VALUES (%s, %s, %s, %s, %s)',
+        (white_name, black_name, result, datetime.now(), current_user.id)
     )
     
     conn.commit()
@@ -450,11 +500,16 @@ def login():
             cur = conn.cursor()
             
             # Buscar usuario
-            cur.execute('SELECT * FROM users WHERE username = %s', (username,))
+            cur.execute('''
+                SELECT id, username, password_hash, is_admin, 
+                       COALESCE(player_name, NULL) as player_name 
+                FROM users 
+                WHERE username = %s
+            ''', (username,))
             user = cur.fetchone()
             
             if user and check_password_hash(user['password_hash'], password):
-                user_obj = User(user['id'], user['username'], user['is_admin'])
+                user_obj = User(user['id'], user['username'], user['is_admin'], user['player_name'])
                 login_user(user_obj)
                 
                 # Resetear intentos fallidos
@@ -525,101 +580,159 @@ def get_player_game_counts():
     conn.close()
     return player_counts, pair_counts
 
-@app.route('/suggest_match')
-@rate_limit(max_requests=5, window=60)
-@login_required
-def suggest_match():
-    conn = get_db()
-    cur = conn.cursor()
-    
-    try:
-        # Obtener todos los jugadores
-        cur.execute('SELECT name FROM players')
-        players = [row['name'] for row in cur.fetchall()]
-        
-        cur.close()
-        conn.close()
-        
-        player_counts, pair_counts = get_player_game_counts()
-        
-        # Encontrar todas las posibles parejas y sus puntuaciones
-        pairs = []
-        for i, p1 in enumerate(players):
-            for p2 in players[i+1:]:
-                pair = tuple(sorted([p1, p2]))
-                games_between = pair_counts.get(pair, 0)
-                
-                # Calcular puntuación (menor es mejor)
-                score = games_between * 10  # Prioridad alta a parejas con pocos juegos
-                
-                # Penalizar si algún jugador tiene muchos más juegos que el promedio
-                avg_games = sum(player_counts.values()) / len(player_counts)
-                score += abs(player_counts[p1] - avg_games)
-                score += abs(player_counts[p2] - avg_games)
-                
-                # Agregar algo de aleatoriedad
-                from random import uniform
-                score += uniform(0, 5)
-                
-                pairs.append((score, p1, p2))
-        
-        # Ordenar por puntuación y tomar uno de los mejores
-        pairs.sort()
-        from random import randint
-        selected_index = randint(0, min(2, len(pairs)-1))
-        
-        if not pairs:
-            return jsonify({'error': 'No hay suficientes jugadores'})
-        
-        _, p1, p2 = pairs[selected_index]
-        
-        # Nueva conexión para la segunda consulta
-        conn = get_db()
-        cur = conn.cursor()
-        
-        # Decidir colores basado en historial
-        cur.execute('''
-            SELECT white, black 
-            FROM games 
-            WHERE (white = %s OR black = %s OR white = %s OR black = %s)
-            ORDER BY date DESC
-            LIMIT 1
-        ''', (p1, p1, p2, p2))
-        last_game = cur.fetchone()
-        
-        cur.close()
-        conn.close()
-        
-        if last_game:
-            if last_game['white'] == p1 or last_game['black'] == p2:
-                white, black = p2, p1
-            else:
-                white, black = p1, p2
-        else:
-            from random import choice
-            if choice([True, False]):
-                white, black = p1, p2
-            else:
-                white, black = p2, p1
-        
-        return jsonify({
-            'white': white,
-            'black': black,
-            'white_display': format_name(white),
-            'black_display': format_name(black)
-        })
-        
-    except Exception as e:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-        raise e
-
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico')
 
+def get_players():
+    """Obtener lista de jugadores para el formulario de registro"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT name FROM players ORDER BY name')
+    players = [{'name': row['name'], 'display_name': format_name(row['name'])} for row in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return players
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        player_name = request.form.get('player_name')
+        
+        if not all([username, password, player_name]):
+            flash('Todos los campos son requeridos')
+            return render_template('register.html', players=get_players())
+            
+        conn = get_db()
+        cur = conn.cursor()
+        
+        try:
+            # Verificar si el usuario ya existe
+            cur.execute('SELECT id FROM users WHERE username = %s', (username,))
+            if cur.fetchone():
+                flash('El nombre de usuario ya está en uso')
+                return render_template('register.html', players=get_players())
+                
+            # Verificar si el jugador existe y no está asociado a otro usuario
+            cur.execute('SELECT name FROM players WHERE name = %s', (player_name,))
+            if not cur.fetchone():
+                flash('El jugador no existe en la liga')
+                return render_template('register.html', players=get_players())
+                
+            cur.execute('SELECT id FROM users WHERE player_name = %s', (player_name,))
+            if cur.fetchone():
+                flash('Este jugador ya está asociado a otro usuario')
+                return render_template('register.html', players=get_players())
+            
+            # Crear el usuario
+            cur.execute(
+                'INSERT INTO users (username, password_hash, player_name) VALUES (%s, %s, %s)',
+                (username, generate_password_hash(password), player_name)
+            )
+            
+            conn.commit()
+            flash('Usuario creado exitosamente')
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            logger.error(f"Error en registro: {str(e)}", exc_info=True)
+            flash('Error al crear el usuario. Por favor intenta más tarde.')
+            return render_template('register.html', players=get_players())
+            
+        finally:
+            cur.close()
+            conn.close()
+    
+    return render_template('register.html', players=get_players())
+
+def reset_db():
+    """Reiniciar la base de datos completamente"""
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        # Deshabilitar temporalmente las restricciones de foreign key
+        cur.execute('SET CONSTRAINTS ALL DEFERRED')
+        
+        # Eliminar tablas en orden correcto
+        cur.execute('DROP TABLE IF EXISTS games CASCADE')
+        cur.execute('DROP TABLE IF EXISTS users CASCADE')
+        cur.execute('DROP TABLE IF EXISTS players CASCADE')
+        
+        conn.commit()
+        
+        # Crear tablas en orden correcto
+        cur.execute('''
+            CREATE TABLE players (
+                id SERIAL PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL,
+                initial_rating INTEGER NOT NULL
+            )
+        ''')
+        
+        cur.execute('''
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+                player_name TEXT REFERENCES players(name)
+            )
+        ''')
+        
+        cur.execute('''
+            CREATE TABLE games (
+                id SERIAL PRIMARY KEY,
+                white TEXT NOT NULL REFERENCES players(name),
+                black TEXT NOT NULL REFERENCES players(name),
+                result REAL NOT NULL,
+                date TIMESTAMP NOT NULL,
+                added_by INTEGER REFERENCES users(id)
+            )
+        ''')
+        
+        # Cargar jugadores iniciales desde start.json
+        with open('start.json', 'r', encoding='utf-8') as f:
+            start_data = json.load(f)
+            for player in start_data['players']:
+                cur.execute(
+                    'INSERT INTO players (name, initial_rating) VALUES (%s, %s)',
+                    (player['name'], player['rating'])
+                )
+        
+        # Crear usuario admin
+        cur.execute(
+            'INSERT INTO users (username, password_hash, is_admin) VALUES (%s, %s, %s)',
+            ('admin', generate_password_hash(os.environ.get('ADMIN_PASSWORD', 'admin')), True)
+        )
+        
+        conn.commit()
+        
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/reset_database', methods=['POST'])
+@login_required
+def reset_database():
+    if not current_user.is_admin:
+        flash('Solo el administrador puede reiniciar la base de datos')
+        return redirect(url_for('index'))
+    
+    try:
+        reset_db()
+        flash('Base de datos reiniciada exitosamente')
+    except Exception as e:
+        logger.error(f"Error al reiniciar la base de datos: {str(e)}")
+        flash('Error al reiniciar la base de datos')
+    
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     init_db()
-    app.run() 
+    app.run(debug=True, host='0.0.0.0', port=5000) 

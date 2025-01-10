@@ -29,6 +29,7 @@
             --input-bg: #2d2d2d;
             --input-text: #ffffff;
             --input-border: #404040;
+            --is-dark: 1;
         }
 
         /* Estilos generales */
@@ -83,7 +84,7 @@
         }
 
         .btn-close {
-            filter: var(--btn-close-filter);
+            filter: brightness(0) invert(var(--is-dark, 0));
         }
 
         /* Ajustar colores de botones en modo oscuro */
@@ -271,7 +272,270 @@
         }
         
         .btn-close {
-            filter: var(--text-color) === '#ffffff' ? invert(1) : none;
+            filter: brightness(0) invert(var(--is-dark, 0));
+        }
+
+        /* Estilos para el layout vertical */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding-bottom: 1rem;
+        }
+
+        .card {
+            margin-bottom: 0;
+            border: 1px solid var(--table-border);
+            background-color: var(--bg-color);
+        }
+
+        .card-header {
+            background-color: var(--navbar-bg);
+            border-bottom: 1px solid var(--table-border);
+        }
+
+        .card-body {
+            padding: 0;
+        }
+
+        .card-body .table {
+            margin-bottom: 0;
+        }
+
+        .table-container {
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-color);
+            z-index: 1;
+        }
+
+        /* Ajustes de espaciado y tamaños */
+        .container.mt-4 {
+            margin-top: 0.5rem !important;
+        }
+
+        .navbar {
+            min-height: 50px;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+
+        .mb-4 {
+            margin-bottom: 0.5rem !important;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem !important;
+        }
+
+        .card-header {
+            padding: 0.5rem;
+        }
+
+        .table td, .table th {
+            padding: 0.75rem !important;
+            font-size: 1rem !important;
+        }
+
+        .form-select, .form-control, .btn {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+            font-size: 0.8rem;
+        }
+
+        .row.g-3 {
+            --bs-gutter-y: 0.5rem !important;
+        }
+
+        /* Ajustar altura de las tablas */
+        .row.flex-grow-1 {
+            height: calc(100vh - 200px) !important;
+        }
+
+        /* Ajustar tamaño de íconos y badges */
+        .games-count {
+            font-size: 0.85em !important;
+            margin-left: 0.5rem;
+        }
+
+        .historical-elo {
+            font-size: 0.85em !important;
+            color: #6c757d;
+        }
+
+        .elo-change {
+            padding: 2px 8px !important;
+            min-width: 45px !important;
+            font-size: 0.95em !important;
+            font-weight: 500;
+        }
+
+        /* Ajustar espaciado del modal */
+        .modal-header {
+            padding: 0.5rem;
+        }
+
+        .modal-body {
+            padding: 0.5rem;
+        }
+
+        .modal-footer {
+            padding: 0.5rem;
+        }
+
+        /* Ajustar ancho de columnas */
+        .col-md-4 {
+            width: auto;  /* Quitar ancho fijo */
+            min-width: fit-content;  /* Asegurar que cabe el contenido */
+        }
+        .col-md-8 {
+            flex: 1;  /* Tomar el espacio restante */
+        }
+
+        /* Ajustar layout del formulario */
+        .form-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: space-between;  /* Separar selectores de botones */
+        }
+
+        .form-selectors {
+            display: flex;
+            gap: 2rem !important;
+            align-items: center;
+            flex-wrap: nowrap;  /* Evitar que los selectores se envuelvan */
+            min-width: 0;  /* Permitir que los hijos se encojan si es necesario */
+        }
+
+        .form-selectors > div {
+            flex: 0 0 auto;  /* Evitar que los contenedores se encojan */
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-left: auto;  /* Empujar botones a la derecha */
+        }
+
+        /* Ajustar altura de botones y selectores */
+        .form-select, .btn {
+            height: 42px !important;  /* Hacer selectores más altos */
+            padding: 8px 16px !important;  /* Más padding interno */
+            font-size: 0.8rem !important;  /* Texto más grande */
+            line-height: 1.5;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* Ajustar emojis y su espaciado */
+        .selector-emoji {
+            font-size: 1.2rem;  /* Hacer emojis más grandes */
+            margin-right: 0.75rem !important;  /* Más espacio entre emoji y selector */
+        }
+
+        /* Ajustar el contenedor del formulario */
+        .form-row {
+            padding: 1rem 0;  /* Más espacio vertical */
+        }
+
+        /* Ajustar ancho y espaciado interno de los selectores */
+        .form-select {
+            min-width: 220px !important;  /* Hacer selectores más anchos */
+            padding-left: 1rem !important;  /* Más espacio interno izquierdo */
+            padding-right: 2.5rem !important;  /* Más espacio para la flecha */
+        }
+
+        /* Ajustar el selector de resultado que puede ser más pequeño */
+        select[name="result"] {
+            min-width: 180px !important;
+        }
+
+        /* Ajustar tamaño de texto en las tablas */
+        .table td, .table th {
+            padding: 0.75rem !important;
+            font-size: 1rem !important;
+        }
+
+        /* Ajustar badges y elementos secundarios */
+        .games-count {
+            font-size: 0.85em !important;
+            margin-left: 0.5rem;
+        }
+
+        .historical-elo {
+            font-size: 0.85em !important;
+            color: #6c757d;
+        }
+
+        .elo-change {
+            padding: 2px 8px !important;
+            min-width: 45px !important;
+            font-size: 0.95em !important;
+            font-weight: 500;
+        }
+
+        /* Ajustar encabezados de tabla */
+        .table thead th {
+            font-size: 1.1rem !important;
+            font-weight: 600;
+        }
+
+        /* Ajustar nombres de jugadores */
+        .table td:first-child {
+            font-weight: 500;
+        }
+
+        /* Ajustar números de rating */
+        .table td:last-child {
+            font-weight: 500;
+            font-size: 1.05rem !important;
+        }
+
+        /* Ajustar warning icon */
+        .warning-icon {
+            font-size: 1rem !important;
+            margin-left: 0.5rem;
+        }
+
+        /* Estilos para el cambio histórico de ELO */
+        .elo-history {
+            color: #6c757d;
+            font-size: 0.85em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .elo-arrow {
+            font-family: monospace;
+            margin: 0 0.25rem;
+        }
+
+        .elo-final {
+            font-weight: 500;
+        }
+
+        .elo-final.positive {
+            color: #198754;  /* Verde para subidas */
+        }
+
+        .elo-final.negative {
+            color: #dc3545;  /* Rojo para bajadas */
         }
     </style>
 </head>
@@ -298,7 +562,10 @@
                         
                         <!-- Login button -->
                         {% if not current_user.is_authenticated %}
-                            <a href="{{ url_for('login') }}" class="btn btn-primary">Iniciar Sesión</a>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('register') }}" class="btn btn-outline-primary">Registrarse</a>
+                                <a href="{{ url_for('login') }}" class="btn btn-primary">Iniciar Sesión</a>
+                            </div>
                         {% else %}
                             <a href="{{ url_for('logout') }}" class="btn btn-outline-primary">Cerrar Sesión</a>
                         {% endif %}
@@ -306,159 +573,218 @@
                 </div>
             </div>
         </nav>
-                
-        <div class="row">
-            <div class="col-md-4">
-                <h2>Ranking</h2>
-                <table class="table rankings-table">
-                    <thead>
-                        <tr>
-                            <th>Pos</th>
-                            <th>Jugador</th>
-                            <th>Rating</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for player in players %}
-                        <tr>
-                            <td>{{ loop.index }}</td>
-                            <td>
-                                {{ player.display_name }}
-                                {% if player.warning %}
-                                    <span class="warning-icon" title="Faltan partidas esta semana">⚠️</span>
-                                {% endif %}
-                                <span class="games-count">({{ player.games_this_week }}/3)</span>
-                            </td>
-                            <td>{{ player.rating }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="col-md-8">
-                <h2>Partidas Recientes</h2>
-                <table class="table games-table">
-                    <thead>
-                        <tr>
-                            <th>Blancas</th>
-                            <th>ELO</th>
-                            <th>Negras</th>
-                            <th>ELO</th>
-                            <th>Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for game in games %}
-                        <tr>
-                            <td>
-                                {{ game.white_display }}
-                                {% if game.result == 1 %}👑{% endif %}
-                                <span class="historical-elo">({{ game.white_rating }})</span>
-                            </td>
-                            <td>
-                                {% if game.white_change > 0 %}
-                                    <span class="elo-change elo-positive">+{{ game.white_change }}</span>
-                                {% elif game.white_change < 0 %}
-                                    <span class="elo-change elo-negative">{{ game.white_change }}</span>
-                                {% else %}
-                                    <span class="elo-change elo-neutral">0</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {{ game.black_display }}
-                                {% if game.result == 0 %}👑{% endif %}
-                                <span class="historical-elo">({{ game.black_rating }})</span>
-                            </td>
-                            <td>
-                                {% if game.black_change > 0 %}
-                                    <span class="elo-change elo-positive">+{{ game.black_change }}</span>
-                                {% elif game.black_change < 0 %}
-                                    <span class="elo-change elo-negative">{{ game.black_change }}</span>
-                                {% else %}
-                                    <span class="elo-change elo-neutral">0</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ game.date }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
-        {% if is_admin %}
-        <div class="mt-4">
-            <h2>Agregar Partida</h2>
+        {% if current_user.is_authenticated and (is_admin or current_user.player_name) %}
+        <div class="mb-4">
+            <div class="form-title">
+                <h2>Agregar Partida</h2>
+                {% if not is_admin %}
+                <small class="text-muted fst-italic">
+                    <i class="bi bi-info-circle"></i>
+                    Solo puedes agregar partidas en las que hayas participado
+                </small>
+                {% endif %}
+            </div>
             <form action="{{ url_for('add_game') }}" method="post" class="form-inline">
-                <div class="row g-3 align-items-center">
-                    <div class="col-auto">
-                        <select name="white" id="white-select" class="form-select" required>
-                            <option value="">Jugador blancas...</option>
-                            {% for player in players %}
-                            <option value="{{ player.name }}">{{ player.display_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <select name="black" id="black-select" class="form-select" required>
-                            <option value="">Jugador negras...</option>
-                            {% for player in players %}
-                            <option value="{{ player.name }}">{{ player.display_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <select name="result" class="form-select" required>
-                            <option value="1">Ganan blancas</option>
-                            <option value="0.5">Empate</option>
-                            <option value="0">Ganan negras</option>
-                        </select>
-                    </div>
-                    <div class="col-auto">
+                <div class="form-row">
+                    <div class="form-selectors">
+                        <div class="d-flex align-items-center">
+                            <span class="selector-emoji">⚪</span>
+                            <select name="white" id="white-select" class="form-select" required>
+                                <option value="">Seleccionar jugador</option>
+                                {% for player in players|sort(attribute='display_name') %}
+                                <option value="{{ player.id }}">{{ player.display_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="selector-emoji">⚫</span>
+                            <select name="black" id="black-select" class="form-select" required>
+                                <option value="">Seleccionar jugador</option>
+                                {% for player in players|sort(attribute='display_name') %}
+                                <option value="{{ player.id }}">{{ player.display_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="selector-emoji">👑</span>
+                            <select name="result" class="form-select" required>
+                                <option value="">Seleccionar resultado</option>
+                                <option value="1">Blancas</option>
+                                <option value="0.5">Empate</option>
+                                <option value="0">Negras</option>
+                            </select>
+                        </div>
                         <button type="submit" class="btn btn-primary">Agregar Partida</button>
                     </div>
-                    <div class="col-auto">
-                        <button type="button" id="suggest-match" class="btn btn-secondary">Sugerir Partida</button>
+                    <div class="form-buttons">
+                        {% if current_user.is_authenticated and current_user.player_name %}
+                        <button type="button" id="suggest-my-match" class="btn btn-secondary">Sugerir Partida Para Mí</button>
+                        {% endif %}
+                        <button type="button" id="suggest-random" class="btn btn-outline-secondary">Sugerir Partida Random</button>
+                        {% if is_admin %}
+                        <form action="{{ url_for('reset_database') }}" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro? Esto borrará TODOS los datos de la liga.');">
+                            <button type="submit" class="btn btn-danger">Reiniciar Base de Datos</button>
+                        </form>
+                        {% endif %}
                     </div>
                 </div>
             </form>
         </div>
         {% endif %}
-    </div>
 
-    <!-- Agregar el modal después del div container principal -->
-    <div class="modal fade" id="suggestModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Partida Sugerida</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="suggested-match mb-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span id="whitePlayer" class="h5"></span>
-                            <span class="vs">vs</span>
-                            <span id="blackPlayer" class="h5"></span>
-                        </div>
+        <!-- Botones de sugerencia -->
+        <!-- <div class="mb-4">
+            <div class="d-flex gap-2">
+                {% if current_user.is_authenticated and current_user.player_name %}
+                <button type="button" id="suggest-my-match" class="btn btn-secondary">Sugerir Partida Para Mí</button>
+                {% endif %}
+                <button type="button" id="suggest-random" class="btn btn-outline-secondary">Sugerir Partida Random</button>
+            </div>
+        </div> -->
+
+        <div class="row flex-grow-1 overflow-auto" style="height: calc(100vh - 300px);">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h2 class="mb-0">Ranking</h2>
                     </div>
-                    <form id="suggestedGameForm" action="{{ url_for('add_game') }}" method="post">
-                        <input type="hidden" id="white" name="white">
-                        <input type="hidden" id="black" name="black">
-                        <div class="form-group">
-                            <label class="form-label">Resultado</label>
-                            <select name="result" class="form-select" required>
-                                <option value="1">Ganan blancas</option>
-                                <option value="0.5">Empate</option>
-                                <option value="0">Ganan negras</option>
-                            </select>
-                        </div>
-                    </form>
+                    <div class="card-body overflow-auto">
+                        <table class="table rankings-table">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Jugador</th>
+                                    <th>Rating</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in players %}
+                                <tr data-player-id="{{ player.id if player.id else '' }}" data-player-name="{{ player.name if player.name else '' }}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        {{ player.display_name }}
+                                        {% if player.warning %}
+                                            <span class="warning-icon" title="Faltan partidas esta semana">⚠️</span>
+                                        {% endif %}
+                                        <span class="games-count">({{ player.games_this_week }}/3)</span>
+                                    </td>
+                                    <td>{{ player.rating }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" form="suggestedGameForm" class="btn btn-primary">Guardar Resultado</button>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h2 class="mb-0">Partidas Recientes</h2>
+                    </div>
+                    <div class="card-body overflow-auto">
+                        <table class="table games-table">
+                            <thead>
+                                <tr>
+                                    <th>Blancas</th>
+                                    <th>ELO</th>
+                                    <th>Negras</th>
+                                    <th>ELO</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in games %}
+                                <tr data-white-id="{{ game.white_id }}" data-black-id="{{ game.black_id }}" data-white-name="{{ game.white_display }}" data-black-name="{{ game.black_display }}">
+                                    <td>
+                                        {{ game.white_display }}
+                                        {% if game.result == 1 %}👑{% endif %}
+                                        <span class="elo-history">
+                                            ({{ game.white_rating }}
+                                            <span class="elo-arrow">→</span>
+                                            <span class="elo-final {% if game.white_change > 0 %}positive{% elif game.white_change < 0 %}negative{% endif %}">
+                                                {{ game.white_rating + game.white_change }}
+                                            </span>)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if game.white_change > 0 %}
+                                            <span class="elo-change elo-positive">+{{ game.white_change }}</span>
+                                        {% elif game.white_change < 0 %}
+                                            <span class="elo-change elo-negative">{{ game.white_change }}</span>
+                                        {% else %}
+                                            <span class="elo-change elo-neutral">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ game.black_display }}
+                                        {% if game.result == 0 %}👑{% endif %}
+                                        <span class="elo-history">
+                                            ({{ game.black_rating }}
+                                            <span class="elo-arrow">→</span>
+                                            <span class="elo-final {% if game.black_change > 0 %}positive{% elif game.black_change < 0 %}negative{% endif %}">
+                                                {{ game.black_rating + game.black_change }}
+                                            </span>)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if game.black_change > 0 %}
+                                            <span class="elo-change elo-positive">+{{ game.black_change }}</span>
+                                        {% elif game.black_change < 0 %}
+                                            <span class="elo-change elo-negative">{{ game.black_change }}</span>
+                                        {% else %}
+                                            <span class="elo-change elo-neutral">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ game.date }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Sugerencia -->
+        <div class="modal fade" id="suggestModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Sugerencia de Partida</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="suggested-match mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span id="whitePlayer" class="h5"></span>
+                                <span class="vs">vs</span>
+                                <span id="blackPlayer" class="h5"></span>
+                            </div>
+                        </div>
+                        {% if is_admin %}
+                        <form id="suggestedGameForm" action="{{ url_for('add_game') }}" method="post">
+                            <input type="hidden" id="white" name="white">
+                            <input type="hidden" id="black" name="black">
+                            <div class="form-group">
+                                <label class="form-label">Resultado</label>
+                                <select name="result" class="form-select" required>
+                                    <option value="1">Ganan blancas</option>
+                                    <option value="0.5">Empate</option>
+                                    <option value="0">Ganan negras</option>
+                                </select>
+                            </div>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="newSuggestionBtn">Nueva sugerencia</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        {% if is_admin %}
+                        <button type="submit" form="suggestedGameForm" class="btn btn-primary">Guardar Resultado</button>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -467,116 +793,186 @@
     <script>
     $(document).ready(function() {
         // Inicializar el modal correctamente
-        const suggestModal = new bootstrap.Modal(document.getElementById('suggestModal'), {
-            keyboard: false
+        const suggestModalEl = document.getElementById('suggestModal');
+        const suggestModal = new bootstrap.Modal(suggestModalEl, {
+            keyboard: true,
+            focus: true
         });
+
+        // Manejar el foco cuando se cierra el modal
+        suggestModalEl.addEventListener('hidden.bs.modal', function () {
+            // Devolver el foco al botón que abrió el modal
+            if (currentSuggestionType) {
+                document.getElementById('suggest-my-match')?.focus();
+            } else {
+                document.getElementById('suggest-random')?.focus();
+            }
+        });
+
+        // Variable para mantener el tipo de sugerencia actual
+        let currentSuggestionType = false;  // false = random, true = force user
         
         function getPlayersData() {
             const players = [];
-            $('.rankings-table tbody tr').each(function() {
-                // Limpiar el texto de emojis y espacios extra
-                const nameCell = $(this).find('td:nth-child(2)').clone();
-                nameCell.find('.warning-icon, .games-count').remove();
-                const name = nameCell.text().trim();
-                const gamesCount = parseInt($(this).find('.games-count').text().replace(/[()]/g, '').split('/')[0]);
-                players.push({ name, gamesCount });
+            const select = $('#white-select');
+            const options = select.find('option');
+            
+            options.each(function(index) {
+                const option = $(this);
+                const value = option.val();
+                // Ignorar la opción vacía y asegurarse que el valor no esté vacío
+                if (value && value !== "") {
+                    const id = parseInt(value);
+                    const displayName = option.text();
+                    
+                    // Buscar el conteo de juegos en la tabla
+                    const row = $(`.rankings-table td:contains("${displayName}")`).closest('tr');
+                    const gamesCountText = row.find('.games-count').text();
+                    const gamesCount = parseInt(gamesCountText.match(/\((\d+)/)[1]);
+                    
+                    players.push({ id, displayName, gamesCount });
+                }
             });
+            
             return players;
         }
 
         function getRecentGames() {
             const games = [];
             $('.games-table tbody tr').each(function() {
-                // Limpiar el texto de emojis y espacios extra
-                const whiteCell = $(this).find('td:nth-child(1)').clone();
-                const blackCell = $(this).find('td:nth-child(3)').clone();
+                const row = $(this);
+                const whiteCell = row.find('td:nth-child(1)').clone();
+                const blackCell = row.find('td:nth-child(3)').clone();
                 whiteCell.find('.historical-elo').remove();
                 blackCell.find('.historical-elo').remove();
-                const white = whiteCell.text().replace('👑', '').trim();
-                const black = blackCell.text().replace('👑', '').trim();
-                games.push({ white, black });
+                // Obtener IDs directamente de los atributos
+                const whiteId = parseInt($(this).attr('data-white-id'));
+                const blackId = parseInt($(this).attr('data-black-id'));
+                games.push({ whiteId, blackId });
             });
             return games;
         }
-
-        function suggestMatch() {
+        
+        function suggestMatch(forceUser = false) {
+            currentSuggestionType = forceUser;
             const players = getPlayersData();
             const recentGames = getRecentGames();
+            const currentPlayerId = Number('{% if current_player_id %}{{ current_player_id }}{% else %}0{% endif %}');
+            
+            // Si force_user es true pero no hay usuario logueado o no tiene player_id, no hacer nada
+            if (forceUser && !currentPlayerId) {
+                alert('Debes iniciar sesión y tener un jugador asignado para usar esta función');
+                return;
+            }
+            
+            // Verificar si hay suficientes jugadores
+            if (players.length < 2) {
+                alert('No hay suficientes jugadores para sugerir una partida');
+                return;
+            }
+            
+            // Generar todas las parejas posibles
+            const pairs = [];
+            const avgGames = players.reduce((sum, p) => sum + p.gamesCount, 0) / players.length;
+            
+            // Si es forceUser, asegurarse que el usuario actual existe en la lista
+            if (forceUser) {
+                const currentPlayer = players.find(p => p.id === currentPlayerId);
+                if (!currentPlayer) {
+                    alert(`No se encontró tu jugador en la lista de jugadores disponibles`);
+                    return;
+                }
+            }
             
             // Crear matriz de juegos entre jugadores
             const gameMatrix = {};
             players.forEach(p1 => {
-                gameMatrix[p1.name] = {};
+                gameMatrix[p1.id] = {};
                 players.forEach(p2 => {
-                    gameMatrix[p1.name][p2.name] = 0;
+                    gameMatrix[p1.id][p2.id] = 0;
                 });
             });
             
             // Contar juegos entre cada par
             recentGames.forEach(game => {
-                const white = game.white.replace('👑', '').trim();
-                const black = game.black.replace('👑', '').trim();
-                gameMatrix[white][black]++;
-                gameMatrix[black][white]++;
+                if (game.whiteId && game.blackId) {  // Verificar que los IDs existan
+                    gameMatrix[game.whiteId][game.blackId]++;
+                    gameMatrix[game.blackId][game.whiteId]++;
+                }
             });
             
-            // Encontrar la mejor pareja
-            let bestPair = null;
-            let bestScore = -Infinity;
-            
-            players.forEach((p1, i) => {
-                players.slice(i + 1).forEach(p2 => {
-                    const gamesPlayed = gameMatrix[p1.name][p2.name];
-                    const avgGames = (p1.gamesCount + p2.gamesCount) / 2;
+            for (let i = 0; i < players.length; i++) {
+                for (let j = i + 1; j < players.length; j++) {
+                    const p1 = players[i];
+                    const p2 = players[j];
                     
-                    // Calcular score (mayor es mejor)
-                    let score = 0;
-                    score -= gamesPlayed * 10; // Menos juegos entre sí es mejor
-                    score -= Math.abs(p1.gamesCount - p2.gamesCount) * 2; // Balance de juegos
-                    score += (3 - p1.gamesCount) * 5; // Priorizar jugadores con menos juegos
-                    score += (3 - p2.gamesCount) * 5;
-                    
-                    // Añadir algo de aleatoriedad
-                    score += Math.random() * 5;
-                    
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestPair = [p1.name, p2.name];
+                    // Si es forceUser, asegurarse que uno sea el usuario actual
+                    if (forceUser && p1.id !== currentPlayerId && p2.id !== currentPlayerId) {
+                        continue;
                     }
-                });
-            });
+                    
+                    // Calcular puntuación (menor es mejor)
+                    let score = gameMatrix[p1.id][p2.id] * 10;  // Prioridad alta a parejas con pocos juegos
+                    score += Math.abs(p1.gamesCount - avgGames);  // Balance de juegos
+                    score += Math.abs(p2.gamesCount - avgGames);
+                    score += Math.random() * 5;  // Algo de aleatoriedad
+                    
+                    pairs.push({
+                        score,
+                        p1,
+                        p2
+                    });
+                }
+            }
             
-            if (!bestPair) {
-                alert('No hay suficientes jugadores para sugerir una partida');
+            // Verificar si hay parejas disponibles
+            if (pairs.length === 0) {
+                if (forceUser) {
+                    alert('No se encontraron partidas disponibles para ti');
+                } else {
+                    alert('No hay partidas disponibles para sugerir');
+                }
                 return;
             }
             
-            // Asignar colores basado en el último juego
+            // Ordenar por puntuación y tomar uno de los mejores
+            pairs.sort((a, b) => a.score - b.score);
+            
+            // Tomar uno de los 3 mejores aleatoriamente
+            const selectedPair = pairs[Math.floor(Math.random() * Math.min(3, pairs.length))];
+            
+            // Decidir colores basado en el último juego
             const lastGame = recentGames[0];
             let white, black;
             
-            if (lastGame && (lastGame.white.includes(bestPair[0]) || lastGame.black.includes(bestPair[1]))) {
-                [white, black] = bestPair.reverse();
+            if (lastGame && (lastGame.whiteId === selectedPair.p1.id || lastGame.blackId === selectedPair.p2.id)) {
+                white = selectedPair.p2;
+                black = selectedPair.p1;
             } else {
-                [white, black] = bestPair;
+                white = selectedPair.p1;
+                black = selectedPair.p2;
             }
             
             // Actualizar el modal
-            $('#whitePlayer').text(white + ' ⚪');
-            $('#blackPlayer').text('⚫ ' + black);
-            $('#white').val(white);
-            $('#black').val(black);
+            $('#whitePlayer').text(white.displayName + ' ⚪');
+            $('#blackPlayer').text('⚫ ' + black.displayName);
+            $('#white').val(white.id);
+            $('#black').val(black.id);
             
             suggestModal.show();
         }
         
-        $('#suggest-match').click(function() {
-            console.log('Botón clickeado');
-            const players = getPlayersData();
-            console.log('Jugadores:', players);
-            const games = getRecentGames();
-            console.log('Juegos:', games);
-            suggestMatch();
+        // Event listeners para los botones de sugerencia
+        $('#suggest-my-match').on('click', () => {
+            suggestMatch(true);
+        });
+        
+        $('#suggest-random').on('click', () => {
+            suggestMatch(false);
+        });
+        
+        $('#newSuggestionBtn').on('click', () => {
+            suggestMatch(currentSuggestionType);
         });
 
         // Theme switcher
