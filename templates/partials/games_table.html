@@ -1,0 +1,52 @@
+<div class="col-md-7">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-chess"></i> Historial de Partidas</h5>
+        </div>
+        <div class="table-responsive" style="max-height: calc(100vh - 200px);">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-chess-pawn text-white-piece"></i> Blancas</th>
+                        <th><i class="fas fa-star rating-star"></i> Rating</th>
+                        <th><i class="fas fa-trophy"></i> Resultado</th>
+                        <th><i class="fas fa-star rating-star"></i> Rating</th>
+                        <th><i class="fas fa-chess-pawn text-black-piece"></i> Negras</th>
+                        <th><i class="far fa-calendar-alt"></i> Fecha</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for game in games %}
+                    <tr>
+                        <td>{{ game.white_display }}</td>
+                        <td>
+                            {{ game.white_rating }}
+                            {% if game.white_change > 0 %}
+                                <span class="elo-change elo-up">+{{ game.white_change }}</span>
+                            {% elif game.white_change < 0 %}
+                                <span class="elo-change elo-down">{{ game.white_change }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ game.result }}</td>
+                        <td>
+                            {{ game.black_rating }}
+                            {% if game.black_change > 0 %}
+                                <span class="elo-change elo-up">+{{ game.black_change }}</span>
+                            {% elif game.black_change < 0 %}
+                                <span class="elo-change elo-down">{{ game.black_change }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ game.black_display }}</td>
+                        <td>{{ game.date }}</td>
+                        <td>
+                            {% if game.has_lettuce_factor %}
+                            <span title="El Lechuga era espectador" style="cursor: help;">🥬</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div> 

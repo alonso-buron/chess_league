@@ -1,0 +1,12 @@
+<div>
+    {% if current_user.is_authenticated %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addGameModal">
+            Agregar Partida
+        </button>
+        {% if current_user.is_admin %}
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPlayerModal">
+                Agregar Jugador
+            </button>
+        {% endif %}
+    {% endif %}
+</div> 

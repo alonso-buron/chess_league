@@ -1,0 +1,50 @@
+<div class="modal fade" id="addGameModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Partida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addGameForm" action="{{ url_for('add_game') }}" method="post">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Blancas</label>
+                        <select name="white" class="form-select" required>
+                            <option value="">Seleccionar jugador...</option>
+                            {% for player in players %}
+                            <option value="{{ player.id }}">{{ player.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Negras</label>
+                        <select name="black" class="form-select" required>
+                            <option value="">Seleccionar jugador...</option>
+                            {% for player in players %}
+                            <option value="{{ player.id }}">{{ player.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Resultado</label>
+                        <select name="result" class="form-select" required>
+                            <option value="1">Ganan Blancas</option>
+                            <option value="0.5">Tablas</option>
+                            <option value="0">Ganan Negras</option>
+                        </select>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="has_lettuce_factor" name="has_lettuce_factor">
+                        <label class="form-check-label" for="has_lettuce_factor">
+                            🥬 El Lechuga era espectador
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="addGameForm" class="btn btn-primary">Agregar</button>
+            </div>
+        </div>
+    </div>
+</div> 

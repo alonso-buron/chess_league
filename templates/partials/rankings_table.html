@@ -1,0 +1,43 @@
+<div class="col-md-5">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-ranking-star"></i> Ranking</h5>
+        </div>
+        <div class="table-responsive" style="max-height: calc(100vh - 200px);">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th><i class="fas fa-user"></i> Jugador</th>
+                        <th><i class="fas fa-star"></i> Rating</th>
+                        <th><i class="fas fa-gamepad"></i> Partidas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in players %}
+                    <tr class="{% if loop.index == 1 %}gold-medal{% elif loop.index == 2 %}silver-medal{% elif loop.index == 3 %}bronze-medal{% elif loop.index == players|length %}last-place{% endif %}">
+                        <td>{{ loop.index }}</td>
+                        <td class="table-cell-content">
+                            {{ player.display_name }}
+                            {% if loop.index == 1 %}
+                                <span class="medal-icon">🥇</span>
+                            {% elif loop.index == 2 %}
+                                <span class="medal-icon">🥈</span>
+                            {% elif loop.index == 3 %}
+                                <span class="medal-icon">🥉</span>
+                            {% elif loop.index == players|length %}
+                                <span class="last-place-icon">🚩</span>
+                            {% endif %}
+                            {% if player.warning %}
+                                <span title="Menos de 3 partidas esta semana" style="cursor: help; color: #dc3545;">⚠️</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ player.rating }}</td>
+                        <td>{{ player.games_this_week }}/3</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div> 

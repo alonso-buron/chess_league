@@ -1,0 +1,28 @@
+<div class="modal fade" id="addPlayerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Jugador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addPlayerForm" action="{{ url_for('add_player') }}" method="post">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Nombre Completo</label>
+                        <input type="text" name="player_name" class="form-control" required
+                               placeholder="Ej: Elmer Luzo">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Rating Inicial</label>
+                        <input type="number" name="initial_rating" class="form-control" required
+                               value="500" min="100" max="3000">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="addPlayerForm" class="btn btn-success">Agregar</button>
+            </div>
+        </div>
+    </div>
+</div> 

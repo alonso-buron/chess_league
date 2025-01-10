@@ -1,0 +1,35 @@
+<div class="modal fade" id="suggestGameModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sugerir Partida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="suggestedGameForm">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Blancas</label>
+                        <select name="white" class="form-select" disabled>
+                            <option value="">Seleccionar jugador...</option>
+                            {% for player in players %}
+                            <option value="{{ player.id }}">{{ player.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Negras</label>
+                        <select name="black" class="form-select" disabled>
+                            <option value="">Seleccionar jugador...</option>
+                            {% for player in players %}
+                            <option value="{{ player.id }}">{{ player.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div> 

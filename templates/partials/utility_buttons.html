@@ -1,0 +1,10 @@
+<div>
+    {% if current_user.is_authenticated %}
+        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#suggestGameModal">
+            <i class="fas fa-bullseye"></i> Sugerir Partida Para Mí
+        </button>
+        <button type="button" class="btn btn-info" onclick="suggestRandomGame()">
+            <i class="fas fa-dice"></i> Sugerir Partida Random
+        </button>
+    {% endif %}
+</div> 

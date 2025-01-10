@@ -1,0 +1,355 @@
+<style>
+    /* Estilos generales */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    body {
+        min-height: 100vh;
+        transition: background-color 0.3s;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Estilos para el tema oscuro */
+    body.dark-mode {
+        background-color: #1a1a1a;
+        color: #fff;
+    }
+
+    .dark-mode .navbar {
+        background-color: #2d2d2d !important;
+        color: #fff !important;
+    }
+
+    .dark-mode .navbar-brand {
+        color: #fff !important;
+    }
+
+    .dark-mode .table {
+        color: #fff;
+    }
+
+    .dark-mode .modal-content {
+        background-color: #2d2d2d;
+        color: #fff;
+    }
+
+    /* Estilos para los medallistas */
+    .gold-medal {
+        background-color: rgba(255, 215, 0, 0.1) !important;
+    }
+    .silver-medal {
+        background-color: rgba(192, 192, 192, 0.1) !important;
+    }
+    .bronze-medal {
+        background-color: rgba(205, 127, 50, 0.1) !important;
+    }
+    .medal-icon {
+        margin-left: 5px;
+        font-size: 1.2em;
+    }
+
+    /* Estilo para el último lugar */
+    .last-place {
+        background-color: rgba(220, 53, 69, 0.05) !important;
+    }
+    .last-place-icon {
+        margin-left: 5px;
+        font-size: 1.1em;
+        color: #dc3545;
+        position: relative;
+        cursor: pointer;
+    }
+
+    /* Estilo personalizado para el tooltip */
+    .last-place-icon:hover:after {
+        content: "Al debe";
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        margin-bottom: 5px;
+        z-index: 1000;
+    }
+
+    /* Estilos para cambios de ELO */
+    .elo-change {
+        font-weight: bold;
+        margin-left: 5px;
+    }
+    .elo-up {
+        color: #28a745;
+    }
+    .elo-down {
+        color: #dc3545;
+    }
+
+    /* Estilos para el switch de tema */
+    .theme-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+    }
+
+    /* Posicionamiento de los íconos */
+    .slider .sun,
+    .slider .moon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        transition: .4s;
+        z-index: 1;
+    }
+
+    .slider .sun {
+        right: 7px;
+        opacity: 1;
+    }
+
+    .slider .moon {
+        left: 7px;
+        opacity: 0;
+    }
+
+    /* Cambiar visibilidad de íconos cuando el switch está activado */
+    input:checked + .slider .sun {
+        opacity: 0;
+    }
+
+    input:checked + .slider .moon {
+        opacity: 1;
+    }
+
+    .theme-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+        z-index: 2;
+    }
+
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+
+    /* Estilos para las cards */
+    .card {
+        border: none;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        height: 100%;
+    }
+
+    .card-header {
+        background-color: rgba(0,0,0,0.03);
+        border-bottom: none;
+    }
+
+    .card-header h5 i {
+        margin-right: 0.5rem;
+        opacity: 0.8;
+    }
+
+    .dark-mode .card {
+        background-color: #2d2d2d;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+
+    .dark-mode .card-header {
+        background-color: rgba(255,255,255,0.05);
+    }
+
+    .dark-mode .card-header h5 i {
+        opacity: 0.9;
+    }
+
+    /* Ajustes para las tablas */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        height: calc(100vh - 250px);
+    }
+
+    .dark-mode .table-responsive {
+        background-color: #2d2d2d;
+    }
+
+    /* Personalización de la barra de desplazamiento */
+    .table-responsive::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background-color: rgba(155, 155, 155, 0.5);
+        border-radius: 20px;
+    }
+
+    .dark-mode .table-responsive::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Ajustes para el hover de las tablas */
+    .table-hover tbody tr:hover,
+    .table-hover tbody tr:hover td {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+        color: inherit !important;
+    }
+
+    .dark-mode .table-hover tbody tr:hover,
+    .dark-mode .table-hover tbody tr:hover td {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: inherit !important;
+    }
+
+    /* Mantener colores de medallas en hover */
+    .table-hover tbody tr.gold-medal:hover,
+    .table-hover tbody tr.gold-medal:hover td {
+        background-color: rgba(255, 215, 0, 0.15) !important;
+        color: inherit !important;
+    }
+    .table-hover tbody tr.silver-medal:hover,
+    .table-hover tbody tr.silver-medal:hover td {
+        background-color: rgba(192, 192, 192, 0.15) !important;
+        color: inherit !important;
+    }
+    .table-hover tbody tr.bronze-medal:hover,
+    .table-hover tbody tr.bronze-medal:hover td {
+        background-color: rgba(205, 127, 50, 0.15) !important;
+        color: inherit !important;
+    }
+    .table-hover tbody tr.last-place:hover,
+    .table-hover tbody tr.last-place:hover td {
+        background-color: rgba(220, 53, 69, 0.1) !important;
+        color: inherit !important;
+    }
+
+    /* Estilos para el navbar */
+    .navbar-brand {
+        font-weight: 600;
+        font-size: 1.25rem;
+        letter-spacing: -0.025em;
+    }
+
+    .navbar {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.5rem;
+        background-color: #f8f9fa;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+
+    .dark-mode .navbar {
+        background-color: #2d2d2d;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+
+    /* Ajuste de contenedor */
+    .container-fluid {
+        max-width: 1800px;
+    }
+
+    /* Ajustes para las tablas */
+    .table-cell-content,
+    .table tbody td {
+        font-size: 0.9375rem;
+    }
+
+    /* Estilos para los encabezados de tabla */
+    .table thead th {
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    /* Estilos para los botones */
+    .btn {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        margin-right: 0.5rem;
+    }
+
+    /* Estilos para los iconos */
+    .fas, .far {
+        margin-right: 0.5rem;
+    }
+
+    .table th .fas,
+    .table th .far {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+
+    .dark-mode .table th .fas,
+    .dark-mode .table th .far {
+        color: #adb5bd;
+    }
+
+    /* Iconos de piezas y rating */
+    .text-white-piece {
+        color: #f8f9fa !important;
+        text-shadow: 0 0 1px #000;
+    }
+
+    .text-black-piece {
+        color: #212529 !important;
+    }
+
+    .dark-mode .text-white-piece {
+        color: #fff !important;
+        text-shadow: none;
+    }
+
+    .dark-mode .text-black-piece {
+        color: #495057 !important;
+    }
+
+    .rating-star {
+        color: #ffc107 !important;
+        text-shadow: 0 0 1px rgba(0,0,0,0.2);
+    }
+
+    .dark-mode .rating-star {
+        color: #ffd700 !important;
+        text-shadow: 0 0 2px rgba(0,0,0,0.5);
+    }
+</style> 

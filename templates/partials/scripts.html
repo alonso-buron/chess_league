@@ -1,0 +1,36 @@
+<script>
+    // Theme switch functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const themeSwitch = document.getElementById('themeSwitch');
+        const body = document.body;
+        
+        // Check for saved theme preference
+        const darkMode = localStorage.getItem('darkMode') === 'true';
+        themeSwitch.checked = darkMode;
+        body.classList.toggle('dark-mode', darkMode);
+        
+        // Theme switch handler
+        themeSwitch.addEventListener('change', function() {
+            body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', this.checked);
+        });
+    });
+
+    // Random game suggestion
+    function suggestRandomGame() {
+        const players = {{ players|tojson }};
+        if (players.length < 2) return;
+        
+        let player1, player2;
+        do {
+            player1 = players[Math.floor(Math.random() * players.length)];
+            player2 = players[Math.floor(Math.random() * players.length)];
+        } while (player1.id === player2.id);
+        
+        document.querySelector('#suggestedGameForm select[name="white"]').value = player1.id;
+        document.querySelector('#suggestedGameForm select[name="black"]').value = player2.id;
+        
+        const modal = new bootstrap.Modal(document.getElementById('suggestGameModal'));
+        modal.show();
+    }
+</script> 
