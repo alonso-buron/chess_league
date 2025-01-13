@@ -409,11 +409,11 @@ def index():
         player_stats[game['white']]['white_games'] += 1
         player_stats[game['black']]['black_games'] += 1
         
-        if game['result'] == '1.0':
+        if game['result'] == 1:  # Victoria blancas
             player_stats[game['white']]['white_wins'] += 1
-        elif game['result'] == '0.0':
+        elif game['result'] == 0:  # Victoria negras
             player_stats[game['black']]['black_wins'] += 1
-        else:  # '0.5'
+        else:  # Empate
             player_stats[game['white']]['white_draws'] += 1
             player_stats[game['black']]['black_draws'] += 1
         
@@ -458,10 +458,10 @@ def index():
                                           'black_games': 0, 'black_wins': 0, 'black_draws': 0})
         
         white_winrate = 0 if stats['white_games'] == 0 else \
-            round((stats['white_wins'] + stats['white_draws'] * 0.5) / stats['white_games'] * 100, 1)
+            round((stats['white_wins']) / stats['white_games'] * 100, 1)
         
         black_winrate = 0 if stats['black_games'] == 0 else \
-            round((stats['black_wins'] + stats['black_draws'] * 0.5) / stats['black_games'] * 100, 1)
+            round((stats['black_wins']) / stats['black_games'] * 100, 1)
         
         players.append({
             'id': p['id'],
@@ -1031,6 +1031,5 @@ def suggest_game():
 
 # Ejecutar una vez al inicio
 if __name__ == '__main__':
-    add_lettuce_column()
     init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=3007) 
