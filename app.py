@@ -444,7 +444,7 @@ def index():
         historical_ratings[game['black']] = new_black
     
     # Revertir el orden para mostrar los más recientes primero
-    processed_games.reverse()
+    processed_games.reverse() 
     
     # Preparar datos de jugadores usando los ratings finales (históricos)
     players = []
